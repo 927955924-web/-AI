@@ -1,0 +1,23 @@
+# Django Core
+Django>=4.2,<5.0
+djangorestframework>=3.14,<4.0
+djangorestframework-simplejwt>=5.3,<6.0
+django-cors-headers>=4.3,<5.0
+
+# Database (binary, no gcc needed)
+psycopg2-binary>=2.9,<3.0
+
+# Cache
+redis>=5.0,<6.0
+django-redis>=5.4,<6.0
+
+# AI & NLP
+openai>=1.0,<2.0
+
+# MQTT
+paho-mqtt>=2.0,<3.0
+
+# Utils
+python-dotenv>=1.0,<2.0
+gunicorn>=21.0,<23.0
+packaging>=23.0

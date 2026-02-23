@@ -1,0 +1,644 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
+  <title>电商客服助手</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+
+    <!-- Login Modal Overlay -->
+    <div id="login-modal" class="modal-overlay">
+      <div class="modal-card">
+        <h2 class="modal-title">欢迎登录</h2>
+        <div class="modal-tabs">
+          <span class="modal-tab active">登录</span>
+          <span class="modal-tab">注册</span>
+        </div>
+        <div class="form-group">
+          <input type="text" id="server-url" value="http://127.0.0.1:8000" placeholder="服务器地址" />
+        </div>
+        <div class="form-group">
+          <input type="text" id="username" placeholder="用户名" />
+        </div>
+        <div class="form-group">
+          <input type="password" id="password" placeholder="密码" />
+        </div>
+        <button id="login-btn" class="btn btn-login">登录</button>
+        <p id="login-error" class="error-text"></p>
+        <div class="modal-footer">
+          <a href="#" class="modal-link">忘记密码?</a>
+          <a href="#" class="modal-link">没有账户? 去注册</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full Dashboard (always visible) -->
+    <div class="dashboard">
+
+      <!-- Left: Shop Panel -->
+      <aside class="shop-panel">
+        <div class="control-btn-area">
+          <div class="control-icon">&#9654;</div>
+          <div class="control-label">打开控制台</div>
+        </div>
+        <div class="control-sub" id="user-display">未登录</div>
+        <div class="control-actions">
+          <button id="start-all-btn" class="action-btn action-start">启动全部</button>
+          <button id="stop-all-btn" class="action-btn action-stop">暂停全部</button>
+        </div>
+        <div class="shop-search">
+          <input type="text" id="shop-search-input" placeholder="搜索店铺商品、服务..." />
+          <span class="search-icon">&#128269;</span>
+        </div>
+        <div id="shop-list" class="shop-list">
+          <!-- Dynamic shop cards rendered here -->
+        </div>
+      </aside>
+
+      <!-- Right side: Navbar + Content + Right Panel -->
+      <div class="main-section">
+
+        <!-- Update Notification Bar -->
+        <div id="update-bar" class="update-bar" style="display:none;">
+          <div class="update-bar-content">
+            <span id="update-message"></span>
+            <div id="update-progress-wrap" style="display:none;">
+              <div class="update-progress-bar"><div id="update-progress-fill" class="update-progress-fill"></div></div>
+              <span id="update-progress-text">0%</span>
+            </div>
+          </div>
+          <div class="update-bar-actions">
+            <button id="update-download-btn" class="update-btn update-btn-primary" style="display:none;">立即更新</button>
+            <button id="update-install-btn" class="update-btn update-btn-primary" style="display:none;">重启并安装</button>
+            <button id="update-dismiss-btn" class="update-btn update-btn-secondary">稍后</button>
+          </div>
+        </div>
+
+        <!-- Top Navbar -->
+        <nav class="top-navbar">
+          <div class="nav-tabs">
+            <button class="nav-tab active" data-tab="workspace">
+              <span class="tab-icon">&#127968;</span> 店铺空间
+            </button>
+            <button class="nav-tab" data-tab="monitoring">
+              <span class="tab-icon">&#128065;</span> 情景监控
+            </button>
+            <button class="nav-tab" data-tab="data">
+              <span class="tab-icon">&#128202;</span> 数据监控
+            </button>
+            <button class="nav-tab" data-tab="keywords">
+              <span class="tab-icon">&#128273;</span> 关键词
+            </button>
+            <button class="nav-tab" data-tab="settings">
+              <span class="tab-icon">&#9881;</span> 平台设置
+            </button>
+            <button class="nav-tab" data-tab="knowledge">
+              <span class="tab-icon">&#128218;</span> 通用知识库
+            </button>
+          </div>
+          <div class="nav-right">
+            <!-- Daily Statistics -->
+            <div class="daily-stats" id="daily-stats">
+              <div class="stat-item">
+                <span class="stat-label">今日回复</span>
+                <span class="stat-value" id="stat-replies">0</span>
+                <span class="stat-unit">条</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-label">接待买家</span>
+                <span class="stat-value" id="stat-customers">0</span>
+                <span class="stat-unit">人</span>
+              </div>
+              <div class="stat-divider"></div>
+              <div class="stat-item">
+                <span class="stat-label">平均时长</span>
+                <span class="stat-value" id="stat-avg-time">0</span>
+                <span class="stat-unit">秒</span>
+              </div>
+            </div>
+            <button class="nav-ai-btn">免费AI客服</button>
+            <span class="vip-badge" id="vip-badge">VIP</span>
+            <button id="logout-btn" class="nav-logout-btn">退出</button>
+          </div>
+        </nav>
+
+        <!-- Content Wrapper: Main + Right Panel -->
+        <div class="content-wrapper">
+
+          <!-- Center: Main Content Area -->
+          <main class="main-content">
+            <!-- Welcome / workspace view -->
+            <div id="workspace-view" class="workspace-view">
+              <div class="workspace-header">
+                <h2>&#128073; 点击左侧店铺卡片即可启动店铺</h2>
+                <p class="workspace-desc">此处管理您的店铺, 商品和知识库</p>
+              </div>
+              <div class="workspace-toolbar">
+                <div class="workspace-search">
+                  <input type="text" placeholder="搜索店铺商品、服务..." />
+                </div>
+                <div class="workspace-actions">
+                  <button class="ws-btn ws-btn-default" id="show-all-btn">
+                    <span class="ws-btn-icon">&#9788;</span> 显示所有
+                  </button>
+                  <button class="ws-btn ws-btn-danger" id="batch-delete-btn">
+                    <span class="ws-btn-icon">&#128465;</span> 批量删除
+                  </button>
+                </div>
+              </div>
+              <div id="workspace-shops" class="workspace-shops">
+                <!-- Shop cards also shown here -->
+                <div class="shop-card-create workspace-create" id="add-shop-card-main">
+                  <div class="create-icon">+</div>
+                  <div class="create-label">创建店铺</div>
+                  <div class="create-hint">添加你的店铺账号</div>
+                </div>
+              </div>
+
+              <!-- Floating action buttons -->
+              <div class="fab-container">
+                <button class="fab fab-blue" id="fab-share" title="分享推广">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                </button>
+                <button class="fab fab-blue" id="fab-help" title="帮助中心">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                </button>
+                <button class="fab fab-green" id="fab-contact" title="联系客服">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"/></svg>
+                </button>
+              </div>
+            </div>
+
+            <!-- Shop create/edit form (modal overlay) -->
+            <div id="shop-form-modal" class="modal-overlay" style="display: none;">
+              <div class="shop-modal-card">
+                <div class="shop-modal-header">
+                  <h2 id="shop-form-title">添加店铺</h2>
+                  <span class="shop-modal-close" id="shop-modal-close">&times;</span>
+                </div>
+                <div class="shop-modal-body">
+                  <form id="shop-form">
+                    <!-- 备注名称 -->
+                    <div class="sf-row">
+                      <label class="sf-label"><span class="required">*</span> 备注名称</label>
+                      <div class="sf-field">
+                        <input type="text" name="shop_name" maxlength="200" placeholder="请输入店铺备注名称" required />
+                        <span class="sf-counter"><span class="sf-count" data-for="shop_name">0</span> / 200</span>
+                      </div>
+                    </div>
+
+                    <!-- 平台 -->
+                    <div class="sf-row">
+                      <label class="sf-label"><span class="required">*</span> 平台</label>
+                      <div class="sf-field">
+                        <div class="platform-pills" id="platform-pills">
+                          <button type="button" class="platform-pill active" data-platform="taobao">千牛</button>
+                          <button type="button" class="platform-pill" data-platform="pdd">拼多多</button>
+                          <button type="button" class="platform-pill" data-platform="douyin">抖店</button>
+                          <button type="button" class="platform-pill" data-platform="kuaishou">快手</button>
+                          <button type="button" class="platform-pill" data-platform="jd">京东</button>
+                          <button type="button" class="platform-pill" data-platform="xianyu">闲鱼</button>
+                          <button type="button" class="platform-pill" data-platform="wechat">微信</button>
+                        </div>
+                        <input type="hidden" name="platform_type" value="taobao" />
+                      </div>
+                    </div>
+
+                    <!-- 警告提示 -->
+                    <div class="sf-warning" id="sf-warning">
+                      请关闭千牛客户端的自动登录！否则每次启动店铺都会登录同一个账号！并且按照官网教程打开千牛的讲述人模式
+                    </div>
+
+                    <!-- 登录账号 -->
+                    <div class="sf-row">
+                      <label class="sf-label">登录账号</label>
+                      <div class="sf-field">
+                        <input type="text" name="account" maxlength="200" placeholder="请输入登录账号" />
+                        <span class="sf-counter"><span class="sf-count" data-for="account">0</span> / 200</span>
+                      </div>
+                    </div>
+
+                    <!-- 登录密码 -->
+                    <div class="sf-row">
+                      <label class="sf-label">登录密码</label>
+                      <div class="sf-field sf-field-pwd">
+                        <input type="password" name="password" placeholder="请输入登录密码" />
+                        <span class="sf-pwd-toggle" id="sf-pwd-toggle" title="显示密码">&#128065;</span>
+                      </div>
+                    </div>
+
+                    <!-- 绑定已有店铺 -->
+                    <div class="sf-row">
+                      <label class="sf-label">绑定已有店铺</label>
+                      <div class="sf-field">
+                        <select name="bind_shop">
+                          <option value="">不绑定其他店铺</option>
+                        </select>
+                        <div class="sf-hint">仅绑定目标店铺的店铺知识库和商品库，仅在创建店铺时可以指定绑定的店铺</div>
+                      </div>
+                    </div>
+
+                    <!-- 绑定通用知识库 -->
+                    <div class="sf-row">
+                      <label class="sf-label">绑定通用知识库</label>
+                      <div class="sf-field">
+                        <select name="bind_kb">
+                          <option value="">不绑定通用知识库，使用自动创建的店铺知识库</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <!-- 更多设置 (collapsible) -->
+                    <div class="sf-collapse-header" id="sf-more-toggle">
+                      <span>更多设置</span>
+                      <span class="sf-collapse-arrow" id="sf-collapse-arrow">&#9662;</span>
+                    </div>
+                    <div class="sf-collapse-body" id="sf-more-body" style="display: none;">
+                      <!-- 店铺链接 -->
+                      <div class="sf-row">
+                        <label class="sf-label">店铺链接</label>
+                        <div class="sf-field">
+                          <input type="text" name="login_url" maxlength="200" placeholder="请输入店铺链接" />
+                          <span class="sf-counter"><span class="sf-count" data-for="login_url">0</span> / 200</span>
+                        </div>
+                      </div>
+
+                      <!-- 店铺知识 -->
+                      <div class="sf-row sf-row-top">
+                        <label class="sf-label">店铺知识</label>
+                        <div class="sf-field">
+                          <textarea name="notes" maxlength="3000" rows="4" placeholder="请输入店铺相关知识"></textarea>
+                          <span class="sf-counter"><span class="sf-count" data-for="notes">0</span> / 3000</span>
+                        </div>
+                      </div>
+
+                      <!-- 提示词 -->
+                      <div class="sf-row sf-row-top">
+                        <label class="sf-label">提示词</label>
+                        <div class="sf-field">
+                          <textarea name="system_prompt" maxlength="3000" rows="3" placeholder="请输入AI提示词">你是一名专业的电商客服，请根据我提供给你的上下文给出对客户的回复，你只需要输出对客户的回复即可，请勿包含任何其他内容。</textarea>
+                          <span class="sf-counter"><span class="sf-count" data-for="system_prompt">59</span> / 3000</span>
+                        </div>
+                      </div>
+
+                      <!-- AI模型 -->
+                      <div class="sf-row">
+                        <label class="sf-label">AI模型</label>
+                        <div class="sf-field">
+                          <select name="ai_model">
+                            <option value="">选择AI模型</option>
+                            <option value="doubao-seed-1.6">Doubao-Seed-1.6（推荐）</option>
+                            <option value="deepseek-v3.2">Deepseek-V3.2</option>
+                            <option value="gemini-3.0-pro">Gemini-3.0-Pro</option>
+                            <option value="gpt-5">GPT-5</option>
+                            <option value="qwen-3-plus">Qwen-3-plus</option>
+                            <option value="gpt-4o-mini">gpt-4o-mini</option>
+                          </select>
+                        </div>
+                      </div>
+                    </div>
+
+                    <!-- Footer buttons -->
+                    <div class="sf-footer">
+                      <button type="button" id="cancel-form-btn" class="btn btn-cancel">取消</button>
+                      <button type="submit" class="btn btn-primary">确定</button>
+                    </div>
+                  </form>
+                </div>
+              </div>
+            </div>
+
+            <!-- Keywords Tab View -->
+            <div id="keywords-view" class="keywords-view" style="display: none;">
+              <div class="keywords-header">
+                <h2>&#128273; 关键词规则管理</h2>
+                <p class="keywords-desc">配置关键词触发规则和敏感词过滤</p>
+              </div>
+
+              <!-- Sub-tabs for keyword types -->
+              <div class="keywords-tabs">
+                <button class="kw-tab active" data-kw-tab="trigger">关键词触发</button>
+                <button class="kw-tab" data-kw-tab="sensitive">敏感词过滤</button>
+              </div>
+
+              <!-- Keyword Trigger Rules -->
+              <div class="kw-tab-content active" id="kw-trigger">
+                <div class="kw-toolbar">
+                  <button class="ws-btn ws-btn-green" id="kw-add-trigger">+ 添加规则</button>
+                  <select id="kw-shop-filter" class="kw-filter-select">
+                    <option value="">全部店铺</option>
+                  </select>
+                </div>
+                <table class="kw-table">
+                  <thead>
+                    <tr>
+                      <th style="width:50px">启用</th>
+                      <th style="width:150px">规则名称</th>
+                      <th>关键词</th>
+                      <th style="width:100px">匹配方式</th>
+                      <th>预设回复</th>
+                      <th style="width:80px">优先级</th>
+                      <th style="width:100px">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="kw-trigger-tbody">
+                    <tr><td colspan="7" class="kw-empty">暂无关键词规则</td></tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <!-- Sensitive Word Rules -->
+              <div class="kw-tab-content" id="kw-sensitive">
+                <div class="kw-toolbar">
+                  <button class="ws-btn ws-btn-green" id="kw-add-sensitive">+ 添加规则</button>
+                  <select id="sw-shop-filter" class="kw-filter-select">
+                    <option value="">全部店铺</option>
+                  </select>
+                </div>
+                <table class="kw-table">
+                  <thead>
+                    <tr>
+                      <th style="width:50px">启用</th>
+                      <th style="width:150px">规则名称</th>
+                      <th>敏感词</th>
+                      <th style="width:120px">替换为</th>
+                      <th style="width:100px">操作</th>
+                    </tr>
+                  </thead>
+                  <tbody id="kw-sensitive-tbody">
+                    <tr><td colspan="5" class="kw-empty">暂无敏感词规则</td></tr>
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <!-- Monitoring Tab View -->
+            <div id="monitoring-view" class="monitoring-view" style="display: none;">
+              <div class="monitoring-header">
+                <h2>&#128065; 情景监控规则</h2>
+                <p class="monitoring-desc">配置智能情景监控，自动识别客户意图并触发动作</p>
+              </div>
+              <div class="monitoring-toolbar">
+                <button class="ws-btn ws-btn-green" id="scenario-add-btn">+ 添加规则</button>
+                <select id="scenario-shop-filter" class="kw-filter-select">
+                  <option value="">全部店铺</option>
+                </select>
+              </div>
+              <table class="kw-table">
+                <thead>
+                  <tr>
+                    <th style="width:50px">启用</th>
+                    <th style="width:150px">规则名称</th>
+                    <th style="width:100px">情景类型</th>
+                    <th style="width:100px">检测方式</th>
+                    <th>触发条件</th>
+                    <th style="width:100px">触发动作</th>
+                    <th style="width:80px">触发次数</th>
+                    <th style="width:100px">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="scenario-tbody">
+                  <tr><td colspan="8" class="kw-empty">暂无情景规则</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- BrowserView renders on top of this area when shop is selected -->
+
+            <!-- Shop Detail Page (modal overlay) -->
+            <div id="shop-detail-modal" class="modal-overlay" style="display: none;">
+              <div class="shop-detail-card">
+                <div class="shop-detail-header">
+                  <h2 id="shop-detail-title">店铺详情</h2>
+                  <span class="shop-modal-close" id="shop-detail-close">&times;</span>
+                </div>
+                <div class="shop-detail-tabs">
+                  <button class="sd-tab active" data-sd-tab="knowledge">&#128218; 店铺知识</button>
+                  <button class="sd-tab" data-sd-tab="products">&#128722; 商品管理</button>
+                  <button class="sd-tab" data-sd-tab="info">&#128203; 店铺信息</button>
+                </div>
+                <div class="shop-detail-body">
+
+                  <!-- Tab: 店铺知识 -->
+                  <div class="sd-tab-content active" id="sd-knowledge">
+                    <div class="sd-knowledge-row">
+                      <div class="sd-knowledge-col">
+                        <h3>店铺知识（必参考）</h3>
+                        <textarea id="sd-shop-knowledge" maxlength="3000" rows="8" placeholder="请输入店铺相关知识，客服回复时会参考此内容..."></textarea>
+                        <span class="sf-counter"><span class="sf-count" id="sd-knowledge-count">0</span> / 3000</span>
+                      </div>
+                      <div class="sd-knowledge-col">
+                        <h3>AI 提示词（Prompt）</h3>
+                        <textarea id="sd-system-prompt" maxlength="3000" rows="8" placeholder="请输入AI提示词...">你是一名专业的电商客服，请根据我提供给你的上下文给出对客户的回复，你只需要输出对客户的回复即可，请勿包含任何其他内容。</textarea>
+                        <span class="sf-counter"><span class="sf-count" id="sd-prompt-count">59</span> / 3000</span>
+                      </div>
+                    </div>
+                    <div class="sd-knowledge-actions">
+                      <button class="btn btn-primary" id="sd-save-knowledge">保存知识与提示词</button>
+                    </div>
+
+                    <hr class="sd-divider" />
+
+                    <div class="sd-kb-section">
+                      <h3>知识库（和客户消息相关性大的才会参考）</h3>
+                      <div class="sd-kb-toolbar">
+                        <button class="sd-kb-btn sd-kb-btn-green" id="sd-kb-add">+ 添加知识</button>
+                        <button class="sd-kb-btn sd-kb-btn-red" id="sd-kb-batch-delete">批量删除</button>
+                        <div class="sd-kb-search">
+                          <input type="text" id="sd-kb-search-input" placeholder="搜索知识..." />
+                          <button class="sd-kb-btn sd-kb-btn-blue" id="sd-kb-search-btn">搜索</button>
+                          <button class="sd-kb-btn sd-kb-btn-default" id="sd-kb-show-all">显示全部</button>
+                        </div>
+                      </div>
+                      <table class="sd-kb-table">
+                        <thead>
+                          <tr>
+                            <th style="width:50px">编号</th>
+                            <th style="width:120px">关联商品</th>
+                            <th>问题</th>
+                            <th>回答</th>
+                            <th style="width:100px">操作</th>
+                          </tr>
+                        </thead>
+                        <tbody id="sd-kb-tbody">
+                          <tr><td colspan="5" class="sd-kb-empty">暂无数据</td></tr>
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+
+                  <!-- Tab: 商品管理 -->
+                  <div class="sd-tab-content" id="sd-products">
+                    <div class="sd-products-toolbar">
+                      <div class="sd-products-search">
+                        <input type="text" id="sd-product-search-input" placeholder="搜索商品..." />
+                      </div>
+                      <button class="ws-btn ws-btn-danger" id="sd-product-batch-delete">
+                        <span class="ws-btn-icon">&#128465;</span> 批量删除
+                      </button>
+                    </div>
+                    <div class="sd-products-actions">
+                      <div class="sd-product-action-card sd-product-add" id="sd-product-add">
+                        <div class="sd-product-action-icon sd-product-icon-blue">+</div>
+                        <span>添加商品</span>
+                      </div>
+                      <div class="sd-product-action-card sd-product-ai-learn" id="sd-product-ai-learn">
+                        <div class="sd-product-action-icon sd-product-icon-purple">&#10038;</div>
+                        <span>AI学习店铺商品</span>
+                      </div>
+                    </div>
+                    <div class="sd-products-list" id="sd-products-list">
+                      <div class="sd-empty-state">
+                        <div class="sd-empty-box-icon">
+                          <svg width="80" height="80" viewBox="0 0 100 100" fill="none">
+                            <rect x="20" y="40" width="60" height="40" rx="4" fill="#f0f0f0" stroke="#d9d9d9" stroke-width="1.5"/>
+                            <path d="M20 50L35 40H65L80 50" stroke="#d9d9d9" stroke-width="1.5" fill="#fafafa"/>
+                            <rect x="40" y="45" width="20" height="12" rx="2" fill="#e8e8e8"/>
+                          </svg>
+                        </div>
+                        <p>暂无商品</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <!-- Tab: 店铺信息 -->
+                  <div class="sd-tab-content" id="sd-info">
+                    <div class="sd-info-grid" id="sd-info-grid">
+                      <!-- Dynamic shop info rendered here -->
+                    </div>
+                  </div>
+
+                </div>
+              </div>
+            </div>
+
+            <!-- Product Detail Modal -->
+            <div class="modal-overlay" id="product-detail-modal" style="display:none;">
+              <div class="shop-detail-card" style="max-width:900px;">
+                <div class="shop-detail-header">
+                  <h2 id="pd-title">商品详情</h2>
+                  <span class="shop-modal-close" id="pd-close">&times;</span>
+                </div>
+                <div class="shop-detail-tabs">
+                  <button class="sd-tab active" data-pd-tab="pd-knowledge">&#128218; 商品知识库</button>
+                  <button class="sd-tab" data-pd-tab="pd-info">&#128203; 商品信息</button>
+                </div>
+                <div class="shop-detail-body">
+                  <!-- Tab: 商品知识库 -->
+                  <div class="sd-tab-content active" id="pd-knowledge">
+                    <div id="pd-qa-list" class="pd-qa-list">
+                      <p class="pd-loading">加载中...</p>
+                    </div>
+                  </div>
+                  <!-- Tab: 商品信息 -->
+                  <div class="sd-tab-content" id="pd-info">
+                    <div id="pd-info-grid" class="sd-info-grid"></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+          </main>
+
+          <!-- Right: Status & Controls Panel -->
+          <aside class="right-panel">
+            <!-- AI Status -->
+            <div class="ai-status-box" id="ai-status-box">
+              <div class="ai-status-indicator running"></div>
+              <div class="ai-status-text">
+                <strong>AI运行中</strong>
+                <small>点击暂停 Ctrl+Alt+S</small>
+              </div>
+            </div>
+
+            <div class="rp-section">
+              <div class="rp-label">更多功能</div>
+            </div>
+
+            <!-- Feature Toggles -->
+            <div class="rp-section">
+              <div class="toggle-row">
+                <span>情景监控</span>
+                <label class="switch">
+                  <input type="checkbox" id="auto-reply-toggle" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="rp-section">
+              <div class="toggle-row">
+                <span>识别订单</span>
+                <label class="switch">
+                  <input type="checkbox" id="order-detect-toggle">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="rp-section">
+              <div class="toggle-row">
+                <span>调试模式</span>
+                <label class="switch">
+                  <input type="checkbox" id="debug-mode-toggle">
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <!-- Logs -->
+            <div class="rp-section rp-log-section">
+              <div class="rp-label">日志:</div>
+              <div id="message-log" class="message-log">
+                <!-- Dynamic log items -->
+              </div>
+            </div>
+
+            <!-- Bottom icons -->
+            <div class="rp-bottom-icons">
+              <div class="rp-icon-btn" title="显示所有">&#9776;</div>
+              <div class="rp-icon-btn" title="批量删除">
+                <span style="color:#e74c3c;">批量删除</span>
+              </div>
+            </div>
+          </aside>
+
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Learning Control Panel (floating overlay) -->
+  <div id="learning-control-panel" class="learning-control-panel" style="display: none;">
+    <div class="learning-control-header">
+      <span class="learning-control-title">店铺商品自动学习</span>
+      <button class="learning-control-close" id="learning-close-btn">&times;</button>
+    </div>
+    <div class="learning-control-body">
+      <div class="learning-control-tip">
+        请登录您的店铺账号后，勾选需要学习的商品，再点击开始学习。浏览器启动和加载时无响应是正常的。
+      </div>
+      <div class="learning-control-status" id="learning-control-status">
+        状态：请勾选需要学习的商品，并点击开始学习
+      </div>
+      <div class="learning-control-progress" id="learning-control-progress" style="display: none;">
+        <div class="learning-progress-bar-container">
+          <div class="learning-progress-bar" id="learning-ctrl-progress-bar"></div>
+        </div>
+        <div class="learning-progress-text" id="learning-ctrl-progress-text">0 / 0 商品已处理</div>
+      </div>
+      <div class="learning-control-actions">
+        <button class="learning-btn learning-btn-primary" id="learning-start-btn">开始学习</button>
+        <button class="learning-btn learning-btn-secondary" id="learning-stop-btn" style="display: none;">停止学习</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

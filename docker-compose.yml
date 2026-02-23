@@ -1,0 +1,92 @@
+services:
+  db:
+    image: postgres:15-alpine
+    restart: always
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: ecommerce_user
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ecommerce_user -d ecommerce_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: always
+    command: redis-server --maxmemory 64mb --maxmemory-policy allkeys-lru
+
+  mqtt:
+    image: eclipse-mosquitto:2
+    restart: always
+    ports:
+      - "1883:1883"
+    volumes:
+      - ./mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - mqtt_data:/mosquitto/data
+
+  backend:
+    build: ./backend
+    restart: always
+    env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: config.settings.production
+      DB_HOST: db
+      DB_PORT: 5432
+      REDIS_URL: redis://redis:6379/1
+      MQTT_HOST: mqtt
+      MQTT_PORT: 1883
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
+      mqtt:
+        condition: service_started
+    volumes:
+      - static_files:/app/staticfiles
+      - ./backend/logs:/app/logs
+
+  openclaw:
+    image: alpine/openclaw:main
+    container_name: openclaw
+    restart: unless-stopped
+    ports:
+      - "18789:18789"
+    environment:
+      MODEL_ID: ${DEEPSEEK_MODEL:-deepseek-chat}
+      BASE_URL: https://api.deepseek.com/v1
+      API_KEY: ${DEEPSEEK_API_KEY}
+      API_PROTOCOL: openai-completions
+      CONTEXT_WINDOW: 64000
+      MAX_TOKENS: 4096
+      OPENCLAW_GATEWAY_TOKEN: ${OPENCLAW_TOKEN:-openclaw2024secure}
+      OPENCLAW_GATEWAY_BIND: lan
+      OPENCLAW_GATEWAY_PORT: 18789
+    volumes:
+      - openclaw_data:/home/node/.openclaw
+      - ./openclaw-workspace:/home/node/.openclaw/workspace
+    depends_on:
+      - backend
+
+  nginx:
+    image: nginx:alpine
+    restart: always
+    ports:
+      - "8080:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./frontend/dist:/usr/share/nginx/html
+      - static_files:/usr/share/nginx/static
+      - ./releases:/var/www/releases:ro
+    depends_on:
+      - backend
+
+volumes:
+  postgres_data:
+  static_files:
+  mqtt_data:
+  openclaw_data:

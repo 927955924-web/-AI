@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>智语AI客服-调试训练窗口</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: "Microsoft YaHei", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            background: #f5f5f5;
+            color: #333;
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .container {
+            display: flex;
+            height: 100vh;
+        }
+
+        .main-panel {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 30px;
+            background: #e8e8e8;
+            border-left: 1px solid #ccc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            writing-mode: vertical-rl;
+            cursor: pointer;
+            color: #666;
+            font-size: 12px;
+        }
+
+        .sidebar:hover {
+            background: #ddd;
+            color: #333;
+        }
+
+        /* Header controls */
+        .header-controls {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin-bottom: 10px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #ddd;
+        }
+
+        .btn-pin {
+            background: #e67e22;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+
+        .btn-pin:hover {
+            background: #d35400;
+        }
+
+        .btn-pin.unpinned {
+            background: #95a5a6;
+        }
+
+        .checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: #666;
+            cursor: pointer;
+        }
+
+        .checkbox-label input {
+            cursor: pointer;
+        }
+
+        /* Form sections */
+        .form-section {
+            margin-bottom: 10px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-size: 12px;
+        }
+
+        .form-textarea {
+            width: 100%;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            padding: 8px;
+            font-size: 13px;
+            font-family: inherit;
+            resize: vertical;
+            background: #fff;
+        }
+
+        .form-textarea:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .form-textarea.history {
+            height: 100px;
+            background: #fafafa;
+        }
+
+        .form-textarea.question {
+            height: 60px;
+        }
+
+        .form-textarea.reply {
+            height: 80px;
+        }
+
+        .form-textarea.knowledge {
+            height: 70px;
+            background: #fafafa;
+        }
+
+        /* Action buttons row */
+        .action-row {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            font-family: inherit;
+        }
+
+        .btn-primary {
+            background: #3498db;
+            color: white;
+            border-color: #3498db;
+        }
+
+        .btn-primary:hover {
+            background: #2980b9;
+        }
+
+        .btn-secondary {
+            background: #ecf0f1;
+            color: #333;
+        }
+
+        .btn-secondary:hover {
+            background: #bdc3c7;
+        }
+
+        /* Countdown section */
+        .countdown-section {
+            margin-bottom: 10px;
+        }
+
+        .countdown-label {
+            font-size: 12px;
+            color: #e67e22;
+            margin-bottom: 5px;
+        }
+
+        .countdown-input {
+            width: 60px;
+            padding: 5px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 13px;
+            text-align: center;
+        }
+
+        .countdown-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        /* Status message */
+        .status-message {
+            text-align: center;
+            color: #999;
+            font-size: 12px;
+            padding: 8px;
+            border-top: 1px solid #eee;
+            margin-top: 5px;
+        }
+
+        /* Knowledge base selector */
+        .kb-section {
+            margin-top: auto;
+            padding-top: 10px;
+            border-top: 1px solid #ddd;
+        }
+
+        .kb-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .kb-label {
+            font-size: 12px;
+            color: #666;
+            white-space: nowrap;
+        }
+
+        .kb-select {
+            flex: 1;
+            padding: 6px 8px;
+            border: 1px solid #ccc;
+            border-radius: 3px;
+            font-size: 12px;
+            background: #fff;
+        }
+
+        .kb-select:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        .btn-add-kb {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 12px;
+            white-space: nowrap;
+        }
+
+        .btn-add-kb:hover {
+            background: #2980b9;
+        }
+
+        .btn-add-kb:disabled {
+            background: #95a5a6;
+            cursor: not-allowed;
+        }
+
+        /* Scrollable content area */
+        .content-area {
+            flex: 1;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Toast notification */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: #fff;
+            padding: 10px 20px;
+            border-radius: 4px;
+            font-size: 13px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+
+        .toast.show {
+            opacity: 1;
+        }
+
+        .toast.success {
+            background: #27ae60;
+        }
+
+        .toast.error {
+            background: #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="main-panel">
+            <!-- Header Controls -->
+            <div class="header-controls">
+                <button class="btn-pin" id="pinBtn">已置顶，点击取消</button>
+                <label class="checkbox-label">
+                    <input type="checkbox" id="followMainWindow">
+                    跟随主窗口
+                </label>
+            </div>
+
+            <!-- Scrollable Content -->
+            <div class="content-area">
+                <!-- Customer Message History -->
+                <div class="form-section">
+                    <label class="form-label">客户消息和历史记录：</label>
+                    <textarea class="form-textarea history" id="messageHistory" readonly placeholder="等待客户消息..."></textarea>
+                </div>
+
+                <!-- Question Content -->
+                <div class="form-section">
+                    <label class="form-label">问题内容(可编辑后用于添加知识库)：</label>
+                    <textarea class="form-textarea question" id="questionContent" placeholder="问题内容"></textarea>
+                </div>
+
+                <!-- Reply Content -->
+                <div class="form-section">
+                    <label class="form-label">待发送的回复(可编辑后用于发送和添加知识库)：</label>
+                    <textarea class="form-textarea reply" id="replyContent" placeholder="AI生成的回复"></textarea>
+                </div>
+
+                <!-- Reference Knowledge -->
+                <div class="form-section">
+                    <label class="form-label">参考的知识</label>
+                    <textarea class="form-textarea knowledge" id="referenceKnowledge" readonly placeholder="匹配到的知识库内容"></textarea>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="action-row">
+                    <button class="btn btn-primary" id="btnProcessed">此次消息我已处理 | 继续接待</button>
+                    <button class="btn btn-secondary" id="btnPause">暂停倒计时 | 我自己处理</button>
+                </div>
+
+                <!-- Countdown Section -->
+                <div class="countdown-section">
+                    <div class="countdown-label">多少秒后自动发送(调试完成后追求回复速度的话请关闭调试窗口)：</div>
+                    <input type="number" class="countdown-input" id="countdownInput" value="15" min="1" max="120">
+                </div>
+
+                <!-- Status Message -->
+                <div class="status-message" id="statusMessage">当前无正在处理的消息</div>
+
+                <!-- Knowledge Base Section -->
+                <div class="kb-section">
+                    <div class="kb-row">
+                        <span class="kb-label">选择目标知识库</span>
+                        <select class="kb-select" id="kbSelect">
+                            <option value="">加载中...</option>
+                        </select>
+                        <button class="btn-add-kb" id="btnAddToKb">发送并添加到知识库</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar -->
+        <div class="sidebar" id="sidebarToggle">
+            展开话术库
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script src="debug-window.js"></script>
+</body>
+</html>

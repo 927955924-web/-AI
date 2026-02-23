@@ -1,0 +1,74 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+venv/
+env/
+.venv/
+
+# Environment variables (contain secrets)
+.env
+backend/.env
+
+# Database
+*.sqlite3
+*.db
+
+# Node.js
+node_modules/
+npm-debug.log*
+
+# Frontend build output
+frontend/dist/
+frontend/dist.tar.gz
+
+# Electron build output
+electron-client/dist/
+electron-client/node_modules/
+releases/
+
+# PyInstaller
+build/
+*.spec
+
+# IDE
+.idea/
+.vscode/
+.trae/
+
+# OS
+.DS_Store
+Thumbs.db
+nul
+null
+
+# Logs
+*.log
+logs/
+
+# Package lock (optional, keep if you want reproducible builds)
+# package-lock.json
+
+# Sensitive deploy/admin scripts (contain server credentials)
+deploy.py
+deploy_fix.py
+deploy_mqtt.py
+create_admin.py
+create_mock_user.py
+check_cloud_users.py
+check_logs.py
+check_status.py
+restart_nginx.py
+
+# Sensitive data files (contain tokens/credentials)
+cloud_shop_info.json
+
+# Misc
+openclaw-workspace/
