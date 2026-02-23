@@ -1,0 +1,24 @@
+[
+{
+  "model": "shops.shop",
+  "pk": "s_90805a1b6a06",
+  "fields": {
+    "shop_name": "宏跃电器",
+    "account": "pdd91814230961",
+    "password": "Zl1776945511",
+    "login_url": "",
+    "platform_type": "pdd",
+    "owner": 1,
+    "status": "stopped",
+    "config_json": {
+      "ai_model": "deepseek-v3.2",
+      "system_prompt": "你是一名专业的电商客服，请根据我提供给你的上下文给出对客户的回复，你只需要输出对客户的回复即可，请勿包含任何其他内容。"
+    },
+    "notes": "",
+    "is_active": true,
+    "last_login": "2026-02-23T02:57:19.474Z",
+    "created_at": "2026-02-22T16:32:23.136Z",
+    "updated_at": "2026-02-23T02:58:24.323Z"
+  }
+}
+]

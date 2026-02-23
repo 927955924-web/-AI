@@ -1,0 +1,3102 @@
+[
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 1,
+  "fields": {
+    "question": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流多少钱？",
+    "answer": "亲，这款商品的价格是22.00，详情可以查看商品页面哦~",
+    "is_correct": true,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_40bc3f7dd787",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:25.349Z",
+    "updated_at": "2026-02-22T19:29:17.842Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 2,
+  "fields": {
+    "question": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_40bc3f7dd787",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:25.360Z",
+    "updated_at": "2026-02-22T18:31:25.360Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 3,
+  "fields": {
+    "question": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_40bc3f7dd787",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:25.363Z",
+    "updated_at": "2026-02-22T18:31:25.363Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 5,
+  "fields": {
+    "question": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_40bc3f7dd787",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能雷达感应自动照明控制模块远距离充放电一体10A大电流",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:25.367Z",
+    "updated_at": "2026-02-22T18:31:25.368Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 6,
+  "fields": {
+    "question": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池多少钱？",
+    "answer": "亲，这款商品的价格是20.60，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_55bfb45edee5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:25.998Z",
+    "updated_at": "2026-02-22T18:31:25.998Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 7,
+  "fields": {
+    "question": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_55bfb45edee5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.003Z",
+    "updated_at": "2026-02-22T18:31:26.003Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 8,
+  "fields": {
+    "question": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_55bfb45edee5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.005Z",
+    "updated_at": "2026-02-22T18:31:26.005Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 10,
+  "fields": {
+    "question": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_55bfb45edee5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制器MPPT6v-24v通用型智能家用光伏大功率充电器锂电池",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.010Z",
+    "updated_at": "2026-02-22T18:31:26.010Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 11,
+  "fields": {
+    "question": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控多少钱？",
+    "answer": "亲，这款商品的价格是20.60，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3d861143a82a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.632Z",
+    "updated_at": "2026-02-22T18:31:26.632Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 12,
+  "fields": {
+    "question": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3d861143a82a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.636Z",
+    "updated_at": "2026-02-22T18:31:26.636Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 13,
+  "fields": {
+    "question": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3d861143a82a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.639Z",
+    "updated_at": "2026-02-22T18:31:26.639Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 15,
+  "fields": {
+    "question": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3d861143a82a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器自动调节亮度铅酸/锂电通用延长电池寿命遥控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:26.643Z",
+    "updated_at": "2026-02-22T18:31:26.643Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 16,
+  "fields": {
+    "question": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制多少钱？",
+    "answer": "亲，这款商品的价格是42.80，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9e3030586e49",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.309Z",
+    "updated_at": "2026-02-22T18:31:27.309Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 17,
+  "fields": {
+    "question": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9e3030586e49",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.314Z",
+    "updated_at": "2026-02-22T18:31:27.314Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 18,
+  "fields": {
+    "question": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9e3030586e49",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.317Z",
+    "updated_at": "2026-02-22T18:31:27.317Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 20,
+  "fields": {
+    "question": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9e3030586e49",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "升压太阳能控制器模块草坪灯庭院照明6-25V磷酸铁锂电池通用控制",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.322Z",
+    "updated_at": "2026-02-22T18:31:27.322Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 21,
+  "fields": {
+    "question": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具多少钱？",
+    "answer": "亲，这款商品的价格是32.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_16ff29ea67af",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.965Z",
+    "updated_at": "2026-02-22T18:31:27.965Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 22,
+  "fields": {
+    "question": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_16ff29ea67af",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.970Z",
+    "updated_at": "2026-02-22T18:31:27.970Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 23,
+  "fields": {
+    "question": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_16ff29ea67af",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.972Z",
+    "updated_at": "2026-02-22T18:31:27.972Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 25,
+  "fields": {
+    "question": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_16ff29ea67af",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款交直流高压电容放电笔专业级电子元件放电感应检测仪放电工具",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:27.977Z",
+    "updated_at": "2026-02-22T18:31:27.977Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 26,
+  "fields": {
+    "question": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板多少钱？",
+    "answer": "亲，这款商品的价格是12.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_360164a44a74",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.067Z",
+    "updated_at": "2026-02-22T18:31:29.067Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 27,
+  "fields": {
+    "question": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_360164a44a74",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.072Z",
+    "updated_at": "2026-02-22T18:31:29.072Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 28,
+  "fields": {
+    "question": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_360164a44a74",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.075Z",
+    "updated_at": "2026-02-22T18:31:29.075Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 30,
+  "fields": {
+    "question": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_360164a44a74",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能灯电路控制板太阳能草坪灯3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.080Z",
+    "updated_at": "2026-02-22T18:31:29.080Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 31,
+  "fields": {
+    "question": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯多少钱？",
+    "answer": "亲，这款商品的价格是10.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d0cd0c674b9d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.688Z",
+    "updated_at": "2026-02-22T18:31:29.688Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 32,
+  "fields": {
+    "question": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d0cd0c674b9d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.692Z",
+    "updated_at": "2026-02-22T18:31:29.692Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 33,
+  "fields": {
+    "question": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d0cd0c674b9d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.695Z",
+    "updated_at": "2026-02-22T18:31:29.695Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 35,
+  "fields": {
+    "question": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d0cd0c674b9d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "3.7V电量显示模块三元锂电池电量指示灯LED迷你高亮电源灯",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:29.700Z",
+    "updated_at": "2026-02-22T18:31:29.700Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 36,
+  "fields": {
+    "question": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED多少钱？",
+    "answer": "亲，这款商品的价格是14.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_22a0252539f9",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:30.374Z",
+    "updated_at": "2026-02-22T18:31:30.374Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 37,
+  "fields": {
+    "question": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_22a0252539f9",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:30.378Z",
+    "updated_at": "2026-02-22T18:31:30.378Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 38,
+  "fields": {
+    "question": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_22a0252539f9",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:30.381Z",
+    "updated_at": "2026-02-22T18:31:30.381Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 40,
+  "fields": {
+    "question": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_22a0252539f9",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "头灯手提灯强光手电改装轻触式驱动通用主板3-15W兼容25W以内LED",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:30.386Z",
+    "updated_at": "2026-02-22T18:31:30.386Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 41,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能多少钱？",
+    "answer": "亲，这款商品的价格是29.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_fe632e3d514e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.060Z",
+    "updated_at": "2026-02-22T18:31:31.060Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 42,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_fe632e3d514e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.071Z",
+    "updated_at": "2026-02-22T18:31:31.071Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 43,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_fe632e3d514e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.073Z",
+    "updated_at": "2026-02-22T18:31:31.073Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 45,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_fe632e3d514e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.078Z",
+    "updated_at": "2026-02-22T18:31:31.078Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 46,
+  "fields": {
+    "question": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路多少钱？",
+    "answer": "亲，这款商品的价格是17.81，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6849990ee129",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.765Z",
+    "updated_at": "2026-02-22T18:31:31.765Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 47,
+  "fields": {
+    "question": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6849990ee129",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.769Z",
+    "updated_at": "2026-02-22T18:31:31.769Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 48,
+  "fields": {
+    "question": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6849990ee129",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.772Z",
+    "updated_at": "2026-02-22T18:31:31.772Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 50,
+  "fields": {
+    "question": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6849990ee129",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器维修太阳能路灯控制电路板太阳能全自动控制电路",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:31.776Z",
+    "updated_at": "2026-02-22T18:31:31.776Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 51,
+  "fields": {
+    "question": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护多少钱？",
+    "answer": "亲，这款商品的价格是29.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_af90be0f4978",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.369Z",
+    "updated_at": "2026-02-22T18:31:32.369Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 52,
+  "fields": {
+    "question": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_af90be0f4978",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.373Z",
+    "updated_at": "2026-02-22T18:31:32.373Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 53,
+  "fields": {
+    "question": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_af90be0f4978",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.376Z",
+    "updated_at": "2026-02-22T18:31:32.376Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 54,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_af90be0f4978",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.378Z",
+    "updated_at": "2026-02-22T18:31:32.378Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 55,
+  "fields": {
+    "question": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_af90be0f4978",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器6V遥控电池带保护太阳能灯控制板带充放电保护",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.380Z",
+    "updated_at": "2026-02-22T18:31:32.380Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 56,
+  "fields": {
+    "question": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A多少钱？",
+    "answer": "亲，这款商品的价格是12.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6d4327d6f57a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.992Z",
+    "updated_at": "2026-02-22T18:31:32.992Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 57,
+  "fields": {
+    "question": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6d4327d6f57a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.996Z",
+    "updated_at": "2026-02-22T18:31:32.996Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 58,
+  "fields": {
+    "question": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6d4327d6f57a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:32.999Z",
+    "updated_at": "2026-02-22T18:31:32.999Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 59,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6d4327d6f57a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:33.002Z",
+    "updated_at": "2026-02-22T18:31:33.002Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 60,
+  "fields": {
+    "question": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_6d4327d6f57a",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "XH-PL035-2A-5电源DC-DC降压模块TPS5430输入DC35V输出2A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:33.004Z",
+    "updated_at": "2026-02-22T18:31:33.004Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 61,
+  "fields": {
+    "question": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控多少钱？",
+    "answer": "亲，这款商品的价格是18.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c00f4985f149",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.144Z",
+    "updated_at": "2026-02-22T18:31:34.145Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 62,
+  "fields": {
+    "question": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c00f4985f149",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.149Z",
+    "updated_at": "2026-02-22T18:31:34.149Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 63,
+  "fields": {
+    "question": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c00f4985f149",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.152Z",
+    "updated_at": "2026-02-22T18:31:34.152Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 64,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c00f4985f149",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.154Z",
+    "updated_at": "2026-02-22T18:31:34.154Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 65,
+  "fields": {
+    "question": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c00f4985f149",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能路灯控制器3.2V3.7V太阳能灯控制器大功率太阳能控遥控光控",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.156Z",
+    "updated_at": "2026-02-22T18:31:34.156Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 66,
+  "fields": {
+    "question": "光伏光控型太阳能控制3-24V/40A 锂电铅酸电池灯自动调节控制板多少钱？",
+    "answer": "亲，这款商品的价格是22.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d29856e3f3aa",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制3-24V/40A,锂电铅酸电池灯自动调节控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.754Z",
+    "updated_at": "2026-02-22T18:31:34.754Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 67,
+  "fields": {
+    "question": "光伏光控型太阳能控制3-24V/40A 锂电铅酸电池灯自动调节控制板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d29856e3f3aa",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制3-24V/40A,锂电铅酸电池灯自动调节控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.765Z",
+    "updated_at": "2026-02-22T18:31:34.765Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 68,
+  "fields": {
+    "question": "光伏光控型太阳能控制3-24V/40A 锂电铅酸电池灯自动调节控制板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d29856e3f3aa",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制3-24V/40A,锂电铅酸电池灯自动调节控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.768Z",
+    "updated_at": "2026-02-22T18:31:34.768Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 69,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d29856e3f3aa",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制3-24V/40A,锂电铅酸电池灯自动调节控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.771Z",
+    "updated_at": "2026-02-22T18:31:34.771Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 70,
+  "fields": {
+    "question": "光伏光控型太阳能控制3-24V/40A 锂电铅酸电池灯自动调节控制板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_d29856e3f3aa",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制3-24V/40A,锂电铅酸电池灯自动调节控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:34.773Z",
+    "updated_at": "2026-02-22T18:31:34.773Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 71,
+  "fields": {
+    "question": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板多少钱？",
+    "answer": "亲，这款商品的价格是16.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3e9253959ac7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:35.719Z",
+    "updated_at": "2026-02-22T18:31:35.719Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 72,
+  "fields": {
+    "question": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3e9253959ac7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:35.727Z",
+    "updated_at": "2026-02-22T18:31:35.727Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 73,
+  "fields": {
+    "question": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3e9253959ac7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:35.730Z",
+    "updated_at": "2026-02-22T18:31:35.730Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 74,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3e9253959ac7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:35.734Z",
+    "updated_at": "2026-02-22T18:31:35.734Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 75,
+  "fields": {
+    "question": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3e9253959ac7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光控太阳能灯电路控制板太阳能草坪灯锂电铅酸蓄电池自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:35.738Z",
+    "updated_at": "2026-02-22T18:31:35.738Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 76,
+  "fields": {
+    "question": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏多少钱？",
+    "answer": "亲，这款商品的价格是12.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_def88ae57a7d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:36.532Z",
+    "updated_at": "2026-02-22T18:31:36.532Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 77,
+  "fields": {
+    "question": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_def88ae57a7d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:36.537Z",
+    "updated_at": "2026-02-22T18:31:36.537Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 78,
+  "fields": {
+    "question": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_def88ae57a7d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:36.540Z",
+    "updated_at": "2026-02-22T18:31:36.540Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 79,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_def88ae57a7d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:36.542Z",
+    "updated_at": "2026-02-22T18:31:36.542Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 80,
+  "fields": {
+    "question": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_def88ae57a7d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "12伏光控开关直流电光控开关自动感应光控开关智能光控开关3~30伏",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:36.544Z",
+    "updated_at": "2026-02-22T18:31:36.544Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 81,
+  "fields": {
+    "question": "AC转DC整流滤波模块/交流转换直流电源 AC/DC 0-9V/20V/30V 1A-3A多少钱？",
+    "answer": "亲，这款商品的价格是8.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5c8bb598803e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "AC转DC整流滤波模块/交流转换直流电源,AC/DC,0-9V/20V/30V,1A-3A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.161Z",
+    "updated_at": "2026-02-22T18:31:37.161Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 82,
+  "fields": {
+    "question": "AC转DC整流滤波模块/交流转换直流电源 AC/DC 0-9V/20V/30V 1A-3A有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5c8bb598803e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "AC转DC整流滤波模块/交流转换直流电源,AC/DC,0-9V/20V/30V,1A-3A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.165Z",
+    "updated_at": "2026-02-22T18:31:37.165Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 83,
+  "fields": {
+    "question": "AC转DC整流滤波模块/交流转换直流电源 AC/DC 0-9V/20V/30V 1A-3A怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5c8bb598803e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "AC转DC整流滤波模块/交流转换直流电源,AC/DC,0-9V/20V/30V,1A-3A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.167Z",
+    "updated_at": "2026-02-22T18:31:37.167Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 84,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5c8bb598803e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "AC转DC整流滤波模块/交流转换直流电源,AC/DC,0-9V/20V/30V,1A-3A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.170Z",
+    "updated_at": "2026-02-22T18:31:37.170Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 85,
+  "fields": {
+    "question": "AC转DC整流滤波模块/交流转换直流电源 AC/DC 0-9V/20V/30V 1A-3A售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5c8bb598803e",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "AC转DC整流滤波模块/交流转换直流电源,AC/DC,0-9V/20V/30V,1A-3A",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.172Z",
+    "updated_at": "2026-02-22T18:31:37.172Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 86,
+  "fields": {
+    "question": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板多少钱？",
+    "answer": "亲，这款商品的价格是7.90，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_7c09e5c9667d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.777Z",
+    "updated_at": "2026-02-22T18:31:37.777Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 87,
+  "fields": {
+    "question": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_7c09e5c9667d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.781Z",
+    "updated_at": "2026-02-22T18:31:37.781Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 88,
+  "fields": {
+    "question": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_7c09e5c9667d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.784Z",
+    "updated_at": "2026-02-22T18:31:37.784Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 89,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_7c09e5c9667d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.786Z",
+    "updated_at": "2026-02-22T18:31:37.786Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 90,
+  "fields": {
+    "question": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_7c09e5c9667d",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "光伏光控型太阳能控制板3-24V锂电铅酸电池灯自动控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:37.788Z",
+    "updated_at": "2026-02-22T18:31:37.789Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 91,
+  "fields": {
+    "question": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板多少钱？",
+    "answer": "亲，这款商品的价格是9.50，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_83c0df445bd7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:38.546Z",
+    "updated_at": "2026-02-22T18:31:38.546Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 92,
+  "fields": {
+    "question": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_83c0df445bd7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:38.555Z",
+    "updated_at": "2026-02-22T18:31:38.555Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 93,
+  "fields": {
+    "question": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_83c0df445bd7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:38.557Z",
+    "updated_at": "2026-02-22T18:31:38.557Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 94,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_83c0df445bd7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:38.560Z",
+    "updated_at": "2026-02-22T18:31:38.560Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 95,
+  "fields": {
+    "question": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_83c0df445bd7",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "智能太阳能控制器天黑自动亮白天自动充电板太阳能灯控制主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:38.562Z",
+    "updated_at": "2026-02-22T18:31:38.562Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 96,
+  "fields": {
+    "question": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器多少钱？",
+    "answer": "亲，这款商品的价格是7.90，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_94a008562b12",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.205Z",
+    "updated_at": "2026-02-22T18:31:39.205Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 97,
+  "fields": {
+    "question": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_94a008562b12",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.209Z",
+    "updated_at": "2026-02-22T18:31:39.209Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 98,
+  "fields": {
+    "question": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_94a008562b12",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.211Z",
+    "updated_at": "2026-02-22T18:31:39.211Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 99,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_94a008562b12",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.213Z",
+    "updated_at": "2026-02-22T18:31:39.213Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 100,
+  "fields": {
+    "question": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_94a008562b12",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "太阳能控制电路板太阳能路灯控制电路太阳能路灯控制太阳能控制器",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.215Z",
+    "updated_at": "2026-02-22T18:31:39.216Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 101,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能多少钱？",
+    "answer": "亲，这款商品的价格是7.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_26589804a908",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.830Z",
+    "updated_at": "2026-02-22T18:31:39.830Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 102,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_26589804a908",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.834Z",
+    "updated_at": "2026-02-22T18:31:39.834Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 103,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_26589804a908",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.836Z",
+    "updated_at": "2026-02-22T18:31:39.836Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 104,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_26589804a908",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.839Z",
+    "updated_at": "2026-02-22T18:31:39.839Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 105,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_26589804a908",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:39.841Z",
+    "updated_at": "2026-02-22T18:31:39.841Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 106,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能多少钱？",
+    "answer": "亲，这款商品的价格是7.90，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1e8cdf9e65db",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:40.476Z",
+    "updated_at": "2026-02-22T18:31:40.476Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 107,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1e8cdf9e65db",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:40.488Z",
+    "updated_at": "2026-02-22T18:31:40.488Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 108,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1e8cdf9e65db",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:40.491Z",
+    "updated_at": "2026-02-22T18:31:40.491Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 109,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1e8cdf9e65db",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:40.494Z",
+    "updated_at": "2026-02-22T18:31:40.494Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 110,
+  "fields": {
+    "question": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1e8cdf9e65db",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "全自动太阳能控制电路板光伏板太阳能路灯控制器电路板维修太阳能",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:40.496Z",
+    "updated_at": "2026-02-22T18:31:40.496Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 111,
+  "fields": {
+    "question": "电饭煲配件SF40FC658 50FC758 30FD972电源板主板电源板多少钱？",
+    "answer": "亲，这款商品的价格是15.80，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_f9b0c7321595",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "电饭煲配件SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:41.115Z",
+    "updated_at": "2026-02-22T18:31:41.115Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 112,
+  "fields": {
+    "question": "电饭煲配件SF40FC658 50FC758 30FD972电源板主板电源板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_f9b0c7321595",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "电饭煲配件SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:41.120Z",
+    "updated_at": "2026-02-22T18:31:41.120Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 113,
+  "fields": {
+    "question": "电饭煲配件SF40FC658 50FC758 30FD972电源板主板电源板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_f9b0c7321595",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "电饭煲配件SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:41.122Z",
+    "updated_at": "2026-02-22T18:31:41.122Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 114,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_f9b0c7321595",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "电饭煲配件SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:41.125Z",
+    "updated_at": "2026-02-22T18:31:41.125Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 115,
+  "fields": {
+    "question": "电饭煲配件SF40FC658 50FC758 30FD972电源板主板电源板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_f9b0c7321595",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "电饭煲配件SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:41.127Z",
+    "updated_at": "2026-02-22T18:31:41.127Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 116,
+  "fields": {
+    "question": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警多少钱？",
+    "answer": "亲，这款商品的价格是45.90，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3661abe28d23",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.069Z",
+    "updated_at": "2026-02-22T18:31:42.069Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 117,
+  "fields": {
+    "question": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3661abe28d23",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.074Z",
+    "updated_at": "2026-02-22T18:31:42.074Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 118,
+  "fields": {
+    "question": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3661abe28d23",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.077Z",
+    "updated_at": "2026-02-22T18:31:42.077Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 119,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3661abe28d23",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.079Z",
+    "updated_at": "2026-02-22T18:31:42.079Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 120,
+  "fields": {
+    "question": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_3661abe28d23",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "多功能线材通断测试仪测试机数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.082Z",
+    "updated_at": "2026-02-22T18:31:42.082Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 121,
+  "fields": {
+    "question": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板多少钱？",
+    "answer": "亲，这款商品的价格是31.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_381bf746aff5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.701Z",
+    "updated_at": "2026-02-22T18:31:42.701Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 122,
+  "fields": {
+    "question": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_381bf746aff5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.705Z",
+    "updated_at": "2026-02-22T18:31:42.705Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 123,
+  "fields": {
+    "question": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_381bf746aff5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.708Z",
+    "updated_at": "2026-02-22T18:31:42.708Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 124,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_381bf746aff5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.710Z",
+    "updated_at": "2026-02-22T18:31:42.710Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 125,
+  "fields": {
+    "question": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_381bf746aff5",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "万能沁园RU-185F/H/QR-RO/-05A/B净水器纯水机电脑电路电源板主板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:42.712Z",
+    "updated_at": "2026-02-22T18:31:42.712Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 126,
+  "fields": {
+    "question": "新款线材通断测试仪测试机 数据线开关元件导线导通开路短路报警多少钱？",
+    "answer": "亲，这款商品的价格是25.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9ed94d801807",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款线材通断测试仪测试机,数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:43.348Z",
+    "updated_at": "2026-02-22T18:31:43.348Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 127,
+  "fields": {
+    "question": "新款线材通断测试仪测试机 数据线开关元件导线导通开路短路报警有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9ed94d801807",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款线材通断测试仪测试机,数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:43.358Z",
+    "updated_at": "2026-02-22T18:31:43.358Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 128,
+  "fields": {
+    "question": "新款线材通断测试仪测试机 数据线开关元件导线导通开路短路报警怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9ed94d801807",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款线材通断测试仪测试机,数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:43.361Z",
+    "updated_at": "2026-02-22T18:31:43.361Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 129,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9ed94d801807",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款线材通断测试仪测试机,数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:43.363Z",
+    "updated_at": "2026-02-22T18:31:43.363Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 130,
+  "fields": {
+    "question": "新款线材通断测试仪测试机 数据线开关元件导线导通开路短路报警售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_9ed94d801807",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "新款线材通断测试仪测试机,数据线开关元件导线导通开路短路报警",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:43.365Z",
+    "updated_at": "2026-02-22T18:31:43.365Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 131,
+  "fields": {
+    "question": "适用智能电饭煲配SF40FC658 50FC758 30FD972电源板主板电源板多少钱？",
+    "answer": "亲，这款商品的价格是13.80，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5118acbcb309",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "适用智能电饭煲配SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.025Z",
+    "updated_at": "2026-02-22T18:31:44.026Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 132,
+  "fields": {
+    "question": "适用智能电饭煲配SF40FC658 50FC758 30FD972电源板主板电源板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5118acbcb309",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "适用智能电饭煲配SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.030Z",
+    "updated_at": "2026-02-22T18:31:44.030Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 133,
+  "fields": {
+    "question": "适用智能电饭煲配SF40FC658 50FC758 30FD972电源板主板电源板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5118acbcb309",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "适用智能电饭煲配SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.032Z",
+    "updated_at": "2026-02-22T18:31:44.032Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 134,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5118acbcb309",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "适用智能电饭煲配SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.034Z",
+    "updated_at": "2026-02-22T18:31:44.034Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 135,
+  "fields": {
+    "question": "适用智能电饭煲配SF40FC658 50FC758 30FD972电源板主板电源板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_5118acbcb309",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "适用智能电饭煲配SF40FC658,50FC758,30FD972电源板主板电源板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.036Z",
+    "updated_at": "2026-02-22T18:31:44.036Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 136,
+  "fields": {
+    "question": "沁园RO/RU185I /RO185G 净水器主板电源板主控板 控制板多少钱？",
+    "answer": "亲，这款商品的价格是35.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1ba2167422ea",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "沁园RO/RU185I,/RO185G,净水器主板电源板主控板,控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.701Z",
+    "updated_at": "2026-02-22T18:31:44.701Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 137,
+  "fields": {
+    "question": "沁园RO/RU185I /RO185G 净水器主板电源板主控板 控制板有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1ba2167422ea",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "沁园RO/RU185I,/RO185G,净水器主板电源板主控板,控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.706Z",
+    "updated_at": "2026-02-22T18:31:44.706Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 138,
+  "fields": {
+    "question": "沁园RO/RU185I /RO185G 净水器主板电源板主控板 控制板怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1ba2167422ea",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "沁园RO/RU185I,/RO185G,净水器主板电源板主控板,控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.708Z",
+    "updated_at": "2026-02-22T18:31:44.708Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 139,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1ba2167422ea",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "沁园RO/RU185I,/RO185G,净水器主板电源板主控板,控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.710Z",
+    "updated_at": "2026-02-22T18:31:44.710Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 140,
+  "fields": {
+    "question": "沁园RO/RU185I /RO185G 净水器主板电源板主控板 控制板售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_1ba2167422ea",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "沁园RO/RU185I,/RO185G,净水器主板电源板主控板,控制板",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:44.713Z",
+    "updated_at": "2026-02-22T18:31:44.713Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 141,
+  "fields": {
+    "question": "微型手摇发电机 户外应急 手机充电 三相永磁无刷 外转子 高效率多少钱？",
+    "answer": "亲，这款商品的价格是8.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_eb957a00a1ec",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "微型手摇发电机,户外应急,手机充电,三相永磁无刷,外转子",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:45.347Z",
+    "updated_at": "2026-02-22T18:31:45.347Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 142,
+  "fields": {
+    "question": "微型手摇发电机 户外应急 手机充电 三相永磁无刷 外转子 高效率有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_eb957a00a1ec",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "微型手摇发电机,户外应急,手机充电,三相永磁无刷,外转子",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:45.352Z",
+    "updated_at": "2026-02-22T18:31:45.352Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 143,
+  "fields": {
+    "question": "微型手摇发电机 户外应急 手机充电 三相永磁无刷 外转子 高效率怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_eb957a00a1ec",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "微型手摇发电机,户外应急,手机充电,三相永磁无刷,外转子",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:45.356Z",
+    "updated_at": "2026-02-22T18:31:45.356Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 144,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_eb957a00a1ec",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "微型手摇发电机,户外应急,手机充电,三相永磁无刷,外转子",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:45.359Z",
+    "updated_at": "2026-02-22T18:31:45.359Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 145,
+  "fields": {
+    "question": "微型手摇发电机 户外应急 手机充电 三相永磁无刷 外转子 高效率售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_eb957a00a1ec",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "微型手摇发电机,户外应急,手机充电,三相永磁无刷,外转子",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:45.362Z",
+    "updated_at": "2026-02-22T18:31:45.362Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 146,
+  "fields": {
+    "question": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝多少钱？",
+    "answer": "亲，这款商品的价格是128.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_42a650353d05",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.054Z",
+    "updated_at": "2026-02-22T18:31:46.054Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 147,
+  "fields": {
+    "question": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_42a650353d05",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.059Z",
+    "updated_at": "2026-02-22T18:31:46.059Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 148,
+  "fields": {
+    "question": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_42a650353d05",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.061Z",
+    "updated_at": "2026-02-22T18:31:46.061Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 149,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_42a650353d05",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.064Z",
+    "updated_at": "2026-02-22T18:31:46.064Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 150,
+  "fields": {
+    "question": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_42a650353d05",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "便携|照明USB充电,手摇2可以40-50次手摇发电机小型手摇式充电宝",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.066Z",
+    "updated_at": "2026-02-22T18:31:46.066Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 151,
+  "fields": {
+    "question": "【2024新款】手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火多少钱？",
+    "answer": "亲，这款商品的价格是128.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_8048f8ed3a75",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "2024新款,手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.705Z",
+    "updated_at": "2026-02-22T18:31:46.705Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 152,
+  "fields": {
+    "question": "【2024新款】手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_8048f8ed3a75",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "2024新款,手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.710Z",
+    "updated_at": "2026-02-22T18:31:46.710Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 153,
+  "fields": {
+    "question": "【2024新款】手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_8048f8ed3a75",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "2024新款,手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.712Z",
+    "updated_at": "2026-02-22T18:31:46.712Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 154,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_8048f8ed3a75",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "2024新款,手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.715Z",
+    "updated_at": "2026-02-22T18:31:46.715Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 155,
+  "fields": {
+    "question": "【2024新款】手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_8048f8ed3a75",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "2024新款,手摇发电机|便携|照明|点火|USB充电手摇2分钟可点火",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:46.717Z",
+    "updated_at": "2026-02-22T18:31:46.717Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 156,
+  "fields": {
+    "question": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50多少钱？",
+    "answer": "亲，这款商品的价格是148.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_0f853278931f",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.324Z",
+    "updated_at": "2026-02-22T18:31:47.324Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 157,
+  "fields": {
+    "question": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_0f853278931f",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.328Z",
+    "updated_at": "2026-02-22T18:31:47.328Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 158,
+  "fields": {
+    "question": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_0f853278931f",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.331Z",
+    "updated_at": "2026-02-22T18:31:47.331Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 159,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_0f853278931f",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.333Z",
+    "updated_at": "2026-02-22T18:31:47.333Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 160,
+  "fields": {
+    "question": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_0f853278931f",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇户外应急新款自动发电机8电容便携照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.336Z",
+    "updated_at": "2026-02-22T18:31:47.336Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 161,
+  "fields": {
+    "question": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50多少钱？",
+    "answer": "亲，这款商品的价格是158.00，详情可以查看商品页面哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c821fe907d50",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:47.999Z",
+    "updated_at": "2026-02-22T18:31:47.999Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 162,
+  "fields": {
+    "question": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50有什么颜色/规格？",
+    "answer": "亲，关于这款商品的规格颜色，您可以查看商品详情页，如有特殊需求也可以告诉我哦~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c821fe907d50",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:48.003Z",
+    "updated_at": "2026-02-22T18:31:48.003Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 163,
+  "fields": {
+    "question": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50怎么使用？",
+    "answer": "亲，商品会附带使用说明，收到后可以参考哦，有问题随时联系我们~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c821fe907d50",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:48.006Z",
+    "updated_at": "2026-02-22T18:31:48.006Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 164,
+  "fields": {
+    "question": "这款商品适合什么人用？",
+    "answer": "亲，这款商品适用范围广，您有特殊需求可以告诉我，我帮您确认是否合适~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c821fe907d50",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:48.008Z",
+    "updated_at": "2026-02-22T18:31:48.008Z"
+  }
+},
+{
+  "model": "knowledge.knowledgebase",
+  "pk": 165,
+  "fields": {
+    "question": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50售后怎么样？",
+    "answer": "亲，我们提供完善的售后服务，有任何问题都可以随时联系我们客服处理~",
+    "is_correct": false,
+    "shop": "s_90805a1b6a06",
+    "owner": 1,
+    "product": "p_c821fe907d50",
+    "source": "auto_learned",
+    "category": "未分类",
+    "keywords": "手摇式户外应急新款发电机便携式家用照明点火USB充电分钟40-50",
+    "usage_count": 0,
+    "question_embedding": null,
+    "embedding_model": "",
+    "created_at": "2026-02-22T18:31:48.011Z",
+    "updated_at": "2026-02-22T18:31:48.011Z"
+  }
+}
+]

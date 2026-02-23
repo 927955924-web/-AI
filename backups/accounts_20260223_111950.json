@@ -1,0 +1,29 @@
+[
+{
+  "model": "accounts.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$600000$uVqh3vsB6kUPy7lpMAeuIm$M6OvR1u/58zAPpR5/LU72bEf+ZMwb1rbsqBculJdEIw=",
+    "last_login": "2026-02-22T16:32:23.012Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@example.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-02-22T15:17:27.113Z",
+    "user_id": "u_26ce1e96239c",
+    "phone": null,
+    "role": "admin",
+    "vip_status": false,
+    "vip_expiry": null,
+    "invite_code": "inv_794be67a",
+    "invited_by": null,
+    "created_at": "2026-02-22T15:17:27.509Z",
+    "updated_at": "2026-02-22T15:42:06.283Z",
+    "groups": [],
+    "user_permissions": []
+  }
+}
+]
