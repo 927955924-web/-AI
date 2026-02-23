@@ -1234,7 +1234,7 @@ function saveConversationRecord({ buyerMessage, customerReply, context, buyerNam
 }
 
 ipcMain.on('platform:new-message', async (event, data) => {
-  const { platformId, customerId, customerName, message, context, timestamp, buyerImages } = data;
+  const { platformId, customerId, customerName, message, context, timestamp, buyerImages, buyerVideoFrames } = data;
   
   console.log(`[${platformId}] New message from ${customerName}: ${message}`);
   
@@ -1337,7 +1337,8 @@ ipcMain.on('platform:new-message', async (event, data) => {
       order_detail: orderDetail,
       product_names: data.productNames || [],
       product_card_ids: data.productCardIds || [],  // Product IDs from chat cards
-      buyer_images: buyerImages || []  // Pass buyer-sent images for vision analysis
+      buyer_images: buyerImages || [],  // Pass buyer-sent images for vision analysis
+      buyer_video_frames: buyerVideoFrames || []  // Pass video key frames for vision analysis
     });
     
     // Log AI model call result clearly

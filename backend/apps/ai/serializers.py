@@ -25,6 +25,10 @@ class GenerateReplySerializer(serializers.Serializer):
         child=serializers.CharField(), required=False, default=list,
         help_text="URLs of images sent by buyer for vision analysis"
     )
+    buyer_video_frames = serializers.ListField(
+        child=serializers.DictField(), required=False, default=list,
+        help_text="Video key frames from buyer: [{timestamp: float, base64: str}]"
+    )
 
 
 class GenerateReplyResponseSerializer(serializers.Serializer):

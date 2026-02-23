@@ -49,6 +49,7 @@ class GenerateReplyView(APIView):
         product_names = serializer.validated_data.get('product_names', [])
         product_card_ids = serializer.validated_data.get('product_card_ids', [])
         buyer_images = serializer.validated_data.get('buyer_images', [])
+        buyer_video_frames = serializer.validated_data.get('buyer_video_frames', [])
         
         service = AIService()
         
@@ -103,10 +104,56 @@ class GenerateReplyView(APIView):
                 image_analysis = "【买家发送的图片内容】\n" + "\n".join(image_descriptions)
                 logger.info(f"[VisionAnalysis] Total analysis: {image_analysis[:200]}...")
         
-        # Add image analysis to context if available
+        # If buyer sent video frames, analyze them with vision model
+        video_analysis = None
+        if buyer_video_frames:
+            logger.info(f"[VisionAnalysis] Analyzing {len(buyer_video_frames)} video frames...")
+            
+            frame_descriptions = []
+            for i, frame in enumerate(buyer_video_frames[:5]):  # Limit to 5 frames
+                try:
+                    frame_base64 = frame.get('base64', '')
+                    timestamp = frame.get('timestamp', 0)
+                    
+                    if not frame_base64 or len(frame_base64) < 100:
+                        continue
+                    
+                    # Check cache
+                    import hashlib
+                    frame_hash = hashlib.md5(frame_base64[:200].encode()).hexdigest()
+                    cache_key = f"vid_frame_desc:{frame_hash}"
+                    cached_desc = cache.get(cache_key)
+                    if cached_desc:
+                        frame_descriptions.append(f"视频{timestamp}s: {cached_desc}")
+                        logger.info(f"[VisionAnalysis] Video frame {i+1} using cached result")
+                        continue
+                    
+                    prompt = """请分析这个视频帧截图，描述画面内容。
+如果是商品展示，请描述商品外观和特征。
+如果是使用演示，请描述操作步骤。
+如果是问题反馈（如产品损坏），请描述具体问题。
+请用简洁的中文回答。"""
+                    
+                    result = service.call_vision_model(prompt, frame_base64, model='qwen-vl-plus')
+                    if result['success'] and result['content']:
+                        cache.set(cache_key, result['content'], 7 * 86400)
+                        frame_descriptions.append(f"视频{timestamp}s: {result['content']}")
+                        logger.info(f"[VisionAnalysis] Video frame {i+1} at {timestamp}s analyzed: {result['content'][:80]}...")
+                    else:
+                        logger.warning(f"[VisionAnalysis] Video frame {i+1} analysis failed: {result.get('error')}")
+                except Exception as e:
+                    logger.error(f"[VisionAnalysis] Error analyzing video frame {i+1}: {e}")
+            
+            if frame_descriptions:
+                video_analysis = "【买家发送的视频内容】\n" + "\n".join(frame_descriptions)
+                logger.info(f"[VisionAnalysis] Video analysis: {video_analysis[:200]}...")
+        
+        # Add image analysis and video analysis to context if available
         enhanced_context = context or ''
         if image_analysis:
             enhanced_context = f"{enhanced_context}\n\n{image_analysis}" if enhanced_context else image_analysis
+        if video_analysis:
+            enhanced_context = f"{enhanced_context}\n\n{video_analysis}" if enhanced_context else video_analysis
         
         result = service.generate_reply(
             question=question,

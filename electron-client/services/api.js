@@ -90,7 +90,9 @@ class ApiService {
         order_detail: data.order_detail,
         model: data.model,
         product_names: data.product_names || [],
-        product_card_ids: data.product_card_ids || []
+        product_card_ids: data.product_card_ids || [],
+        buyer_images: data.buyer_images || [],
+        buyer_video_frames: data.buyer_video_frames || []
       });
       return response.data;
     } catch (error) {

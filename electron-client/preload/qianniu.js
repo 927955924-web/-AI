@@ -368,7 +368,7 @@ function sendMessage(text) {
 /**
  * 检查新消息
  */
-function checkNewMessages() {
+async function checkNewMessages() {
   const messages = extractBuyerMessages();
   
   if (messages.length === 0) return;
@@ -393,12 +393,38 @@ function checkNewMessages() {
     
     console.log('[千牛] 检测到新消息:', latestMsg.text);
     
+    // Extract buyer-sent media (high-res images + video frames)
+    let buyerImages = [];
+    let buyerVideoFrames = [];
+    
+    const quickImages = extractChatImages();
+    if (quickImages.length > 0) {
+      console.log(`[千牛] 检测到 ${quickImages.length} 个买家媒体项，提取高清...`);
+      try {
+        const media = await extractMediaContent();
+        buyerImages = media.images.length > 0 ? media.images : quickImages;
+        buyerVideoFrames = media.videoFrames;
+      } catch (err) {
+        console.warn('[千牛] 媒体提取失败，使用缩略图:', err.message);
+        buyerImages = quickImages;
+      }
+    }
+    
+    if (buyerImages.length > 0) {
+      console.log(`[千牛] 提取到 ${buyerImages.length} 张买家图片`);
+    }
+    if (buyerVideoFrames.length > 0) {
+      console.log(`[千牛] 捕获 ${buyerVideoFrames.length} 个视频帧`);
+    }
+    
     // 通知主进程
     ipcRenderer.send('platform:new-message', {
       platformId: PLATFORM_ID,
       customerId: state.currentBuyer.id,
       customerName: state.currentBuyer.name,
       message: latestMsg.text,
+      buyerImages: buyerImages,
+      buyerVideoFrames: buyerVideoFrames,
       timestamp: latestMsg.timestamp
     });
   }
@@ -690,7 +716,19 @@ function extractProductFromElement(el) {
 }
 
 /**
- * Extract images sent by buyer in recent chat messages
+ * Check if an image element is a content image (not emoji/icon/avatar)
+ */
+function isContentImage(img) {
+  if (img.naturalWidth > 0 && img.naturalWidth <= 50) return false;
+  if (img.naturalHeight > 0 && img.naturalHeight <= 50) return false;
+  const src = img.src || '';
+  if (/emoji|icon|avatar|head|logo|badge|sticker/i.test(src)) return false;
+  if (/emoji|icon|avatar|head|logo|badge|sticker/i.test(img.className || '')) return false;
+  return true;
+}
+
+/**
+ * Extract images sent by buyer in recent chat messages (thumbnail URLs)
  */
 function extractChatImages() {
   const images = [];
@@ -706,14 +744,9 @@ function extractChatImages() {
 
     const imgs = item.querySelectorAll('img[src]');
     for (const img of imgs) {
-      // Filter out emoji, icons, avatars
-      if (img.naturalWidth > 0 && img.naturalWidth <= 50) continue;
-      if (img.naturalHeight > 0 && img.naturalHeight <= 50) continue;
+      if (!isContentImage(img)) continue;
 
       const src = img.src || '';
-      if (/emoji|icon|avatar|head|logo|badge/i.test(src)) continue;
-      if (/emoji|icon|avatar|head|logo|badge/i.test(img.className || '')) continue;
-
       const url = src.startsWith('http') ? src : new URL(src, window.location.href).href;
       if (url && !images.includes(url)) {
         images.push(url);
@@ -723,6 +756,240 @@ function extractChatImages() {
   }
 
   return images;
+}
+
+/**
+ * Click image thumbnails in chat to open preview and get high-res URLs
+ */
+async function getHighResImages() {
+  const messageItems = findAllElements(SELECTORS.messageItem);
+  const highResUrls = [];
+  const recentItems = messageItems.slice(-10);
+  let buyerMsgCount = 0;
+
+  for (let i = recentItems.length - 1; i >= 0 && buyerMsgCount < 5; i--) {
+    const item = recentItems[i];
+    if (!isBuyerMessage(item)) continue;
+    buyerMsgCount++;
+
+    const imgs = item.querySelectorAll('img[src]');
+    for (const img of imgs) {
+      if (!isContentImage(img)) continue;
+      if (highResUrls.length >= 3) break;
+
+      try {
+        // Click thumbnail to open preview
+        img.click();
+        await new Promise(r => setTimeout(r, 800));
+
+        // Try to find the high-res preview image (千牛/淘宝 selectors)
+        const previewSelectors = [
+          '.image-viewer img',
+          '[class*="ImageViewer"] img',
+          'img[class*="preview"]',
+          'img[class*="fullscreen"]',
+          '.ant-image-preview img',
+          '[class*="image-preview"] img',
+          '[class*="viewer"] img[src*="http"]',
+          '[class*="modal"] img[src*="alicdn"]',
+          '[class*="modal"] img[src*="taobaocdn"]'
+        ];
+
+        let previewImg = null;
+        for (const sel of previewSelectors) {
+          previewImg = document.querySelector(sel);
+          if (previewImg && previewImg.src && previewImg.src !== img.src) break;
+          previewImg = null;
+        }
+
+        if (previewImg && previewImg.src) {
+          let highResUrl = previewImg.src;
+          highResUrl = highResUrl.replace(/[?&]x-oss-process=[^&]*/g, '');
+          highResUrl = highResUrl.replace(/[?&]imageView2[^&]*/g, '');
+          if (!highResUrls.includes(highResUrl)) {
+            highResUrls.push(highResUrl);
+            console.log(`[千牛][Vision] Got high-res image: ${highResUrl.substring(0, 80)}...`);
+          }
+        } else {
+          // Fallback: use thumbnail URL with quality params removed
+          let fallbackUrl = img.src;
+          fallbackUrl = fallbackUrl.replace(/[?&]x-oss-process=[^&]*/g, '');
+          fallbackUrl = fallbackUrl.replace(/[?&]imageView2[^&]*/g, '');
+          if (!highResUrls.includes(fallbackUrl)) {
+            highResUrls.push(fallbackUrl);
+            console.log(`[千牛][Vision] Using fallback image: ${fallbackUrl.substring(0, 80)}...`);
+          }
+        }
+
+        // Close preview modal
+        const closeSelectors = [
+          '[class*="close"]',
+          '.ant-modal-close',
+          '[aria-label="关闭"]',
+          '[class*="viewer"] [class*="close"]',
+          'button[class*="close"]'
+        ];
+        for (const sel of closeSelectors) {
+          const closeBtn = document.querySelector(sel);
+          if (closeBtn && closeBtn.offsetParent !== null) {
+            closeBtn.click();
+            break;
+          }
+        }
+        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+        await new Promise(r => setTimeout(r, 400));
+      } catch (err) {
+        console.warn(`[千牛][Vision] Error getting high-res image:`, err.message);
+      }
+    }
+    if (highResUrls.length >= 3) break;
+  }
+
+  return highResUrls;
+}
+
+/**
+ * Extract video frames from buyer-sent videos using Canvas
+ * @param {number} frameCount - Number of key frames to capture
+ * @returns {Promise<Array<{timestamp: number, base64: string}>>}
+ */
+async function extractVideoFrames(frameCount = 3) {
+  const frames = [];
+  const messageItems = findAllElements(SELECTORS.messageItem);
+  const recentItems = messageItems.slice(-10);
+  let buyerMsgCount = 0;
+
+  for (let i = recentItems.length - 1; i >= 0 && buyerMsgCount < 5; i--) {
+    const item = recentItems[i];
+    if (!isBuyerMessage(item)) continue;
+    buyerMsgCount++;
+
+    // Find video elements
+    const videoSelectors = [
+      'video',
+      '[class*="video-player"] video',
+      '[class*="video-msg"] video',
+      '[class*="VideoPlayer"] video'
+    ];
+
+    let videoEl = null;
+    for (const sel of videoSelectors) {
+      videoEl = item.querySelector(sel);
+      if (videoEl) break;
+    }
+
+    // Check for video cards that need clicking to play
+    if (!videoEl) {
+      const videoCards = item.querySelectorAll('[class*="video"], [class*="Video"]');
+      for (const card of videoCards) {
+        try {
+          card.click();
+          await new Promise(r => setTimeout(r, 1500));
+          for (const sel of videoSelectors) {
+            videoEl = document.querySelector(sel);
+            if (videoEl) break;
+          }
+        } catch (e) {
+          console.warn('[千牛][Vision] Error clicking video card:', e.message);
+        }
+        if (videoEl) break;
+      }
+    }
+
+    if (!videoEl) continue;
+
+    try {
+      // Ensure metadata is loaded
+      if (videoEl.readyState < 1) {
+        await Promise.race([
+          new Promise(resolve => {
+            videoEl.addEventListener('loadedmetadata', resolve, { once: true });
+            videoEl.load();
+          }),
+          new Promise(resolve => setTimeout(resolve, 5000))
+        ]);
+      }
+
+      const duration = videoEl.duration;
+      if (!duration || !isFinite(duration) || duration <= 0) {
+        console.warn('[千牛][Vision] Video has invalid duration');
+        continue;
+      }
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      canvas.width = videoEl.videoWidth || 640;
+      canvas.height = videoEl.videoHeight || 360;
+
+      const timePoints = [];
+      for (let j = 1; j <= frameCount; j++) {
+        timePoints.push((duration / (frameCount + 1)) * j);
+      }
+
+      for (const time of timePoints) {
+        videoEl.currentTime = time;
+        await Promise.race([
+          new Promise(resolve => videoEl.addEventListener('seeked', resolve, { once: true })),
+          new Promise(resolve => setTimeout(resolve, 3000))
+        ]);
+
+        ctx.drawImage(videoEl, 0, 0, canvas.width, canvas.height);
+        const base64 = canvas.toDataURL('image/jpeg', 0.8).split(',')[1];
+        if (base64 && base64.length > 100) {
+          frames.push({ timestamp: Math.round(time * 10) / 10, base64 });
+          console.log(`[千牛][Vision] Captured video frame at ${time.toFixed(1)}s`);
+        }
+      }
+
+      // Close video preview if in modal
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+      await new Promise(r => setTimeout(r, 300));
+    } catch (err) {
+      console.warn(`[千牛][Vision] Error extracting video frames:`, err.message);
+    }
+
+    if (frames.length >= frameCount) break;
+  }
+
+  return frames;
+}
+
+/**
+ * Extract all media content (high-res images + video frames) from recent buyer messages
+ */
+async function extractMediaContent() {
+  const content = { images: [], videoFrames: [] };
+
+  try {
+    const result = await Promise.race([
+      (async () => {
+        try {
+          content.images = await getHighResImages();
+        } catch (err) {
+          console.warn('[千牛][Vision] High-res image extraction failed, using thumbnails:', err.message);
+          content.images = extractChatImages();
+        }
+
+        try {
+          content.videoFrames = await extractVideoFrames(3);
+        } catch (err) {
+          console.warn('[千牛][Vision] Video frame extraction failed:', err.message);
+        }
+
+        return content;
+      })(),
+      new Promise(resolve => setTimeout(() => {
+        console.warn('[千牛][Vision] Media extraction timeout (15s)');
+        resolve(content);
+      }, 15000))
+    ]);
+
+    return result;
+  } catch (err) {
+    console.error('[千牛][Vision] Fatal error in media extraction:', err.message);
+    content.images = extractChatImages();
+    return content;
+  }
 }
 
 // Listen for order info extraction request from main process
