@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import Optional, Dict, Any, List
 from django.conf import settings
 from django.core.cache import cache
-from django.db.models import Q
+from django.db.models import Q, F
 from core.utils import md5_hash
 from apps.knowledge.services import KnowledgeService
 
@@ -246,6 +246,15 @@ class AIService:
     6. Save response to knowledge base and cache
     """
     
+    # Token pricing per 1K tokens (in CNY)
+    TOKEN_PRICING = {
+        'deepseek': 0.001,
+        'qwen': 0.0008,
+        'doubao': 0.0005,
+        'openai': 0.014,
+        'gemini': 0.0007,
+    }
+    
     def __init__(self):
         self.knowledge_service = KnowledgeService(
             threshold=getattr(settings, 'KB_SIMILARITY_THRESHOLD', 0.7)
@@ -253,6 +262,58 @@ class AIService:
         self.cache_ttl = getattr(settings, 'AI_REPLY_CACHE_TTL', 86400)
         self.keyword_filter = KeywordFilterService()
         self.scenario_monitor = ScenarioMonitorService()
+        self._current_shop = None  # Track current shop for token usage recording
+    
+    def _normalize_model_name(self, model_version: str) -> str:
+        """Normalize model version to platform name."""
+        model_lower = (model_version or '').lower()
+        if 'deepseek' in model_lower:
+            return 'deepseek'
+        elif 'qwen' in model_lower:
+            return 'qwen'
+        elif 'doubao' in model_lower:
+            return 'doubao'
+        elif 'gpt' in model_lower or 'openai' in model_lower:
+            return 'openai'
+        elif 'gemini' in model_lower:
+            return 'gemini'
+        return 'deepseek'  # default
+    
+    def _save_token_usage(
+        self,
+        prompt_tokens: int,
+        completion_tokens: int,
+        total_tokens: int,
+        model_version: str,
+        request_type: str = 'chat',
+        shop=None,
+        conversation_record=None
+    ):
+        """Save token usage record to database."""
+        try:
+            from .models import TokenUsage
+            from decimal import Decimal
+            
+            model_name = self._normalize_model_name(model_version)
+            
+            # Calculate cost estimate
+            price_per_1k = self.TOKEN_PRICING.get(model_name, 0.001)
+            cost = Decimal(str(total_tokens * price_per_1k / 1000))
+            
+            TokenUsage.objects.create(
+                prompt_tokens=prompt_tokens,
+                completion_tokens=completion_tokens,
+                total_tokens=total_tokens,
+                model_name=model_name,
+                model_version=model_version or '',
+                request_type=request_type,
+                cost_estimate=cost,
+                shop=shop or self._current_shop,
+                conversation_record=conversation_record
+            )
+            logger.debug(f"[Token] Saved usage: {total_tokens} tokens ({model_name})")
+        except Exception as e:
+            logger.warning(f"[Token] Failed to save usage: {e}")
     
     def identify_intent(self, message: str) -> Dict[str, Any]:
         """
@@ -319,6 +380,7 @@ class AIService:
         owner_id: int = None,
         model: str = None,
         product_names: List[str] = None,
+        product_card_ids: List[str] = None,
         platform: str = None,
     ) -> Dict[str, Any]:
         """
@@ -337,6 +399,17 @@ class AIService:
             }
         
         platform = platform or ''
+        
+        # Set current shop for token usage tracking
+        if shop_id:
+            try:
+                from apps.shops.models import Shop
+                self._current_shop = Shop.objects.filter(shop_id=shop_id).first()
+            except Exception as e:
+                logger.warning(f"[Token] Failed to get shop: {e}")
+                self._current_shop = None
+        else:
+            self._current_shop = None
         
         # === Step 0: Scenario monitoring check ===
         scenario_result = None
@@ -410,8 +483,41 @@ class AIService:
         matched_product_ids = []
         if shop_id:
             from apps.products.models import Product
+            import re
             
-            # 1a. Match from order panel product names (from client)
+            # 1a. Extract product IDs from message URLs (1688/taobao/tmall links)
+            url_patterns = [
+                r'offer/(\d+)',           # 1688: offer/123456
+                r'item\.htm\?.*?id=(\d+)', # taobao/tmall: item.htm?id=123456
+                r'detail\.1688\.com/offer/(\d+)',  # 1688 detail
+                r'goods_id[=:](\d+)',      # goods_id parameter
+                r'item_id[=:](\d+)',       # item_id parameter
+            ]
+            for pattern in url_patterns:
+                matches = re.findall(pattern, question)
+                if matches:
+                    for item_id in matches:
+                        # Try to find product by platform_product_id
+                        matched = Product.objects.filter(
+                            shop_id=shop_id, status='active',
+                            platform_product_id=item_id
+                        ).values_list('product_id', flat=True)[:1]
+                        matched_product_ids.extend(matched)
+                        if matched:
+                            logger.info(f"[ProductMatch] Matched product by URL item_id: {item_id}")
+            
+            # 1a2. Match from product card IDs (extracted from chat cards by frontend)
+            if product_card_ids:
+                for card_id in product_card_ids[:5]:
+                    matched = Product.objects.filter(
+                        shop_id=shop_id, status='active',
+                        platform_product_id=card_id
+                    ).values_list('product_id', flat=True)[:1]
+                    matched_product_ids.extend(matched)
+                    if matched:
+                        logger.info(f"[ProductMatch] Matched product by card ID: {card_id}")
+            
+            # 1b. Match from order panel product names (from client)
             if product_names:
                 for name in product_names[:5]:
                     matched = Product.objects.filter(
@@ -420,7 +526,7 @@ class AIService:
                     ).values_list('product_id', flat=True)[:3]
                     matched_product_ids.extend(matched)
             
-            # 1b. Smart match: analyze buyer's message against all shop products
+            # 1c. Smart match: analyze buyer's message against all shop products
             if not matched_product_ids:
                 shop_products = list(Product.objects.filter(
                     shop_id=shop_id, status='active'
@@ -441,7 +547,6 @@ class AIService:
                             score = 1.0
                         else:
                             # Tokenize product name: split by common delimiters
-                            import re
                             tokens = [t for t in re.split(r'[\s/\-\+\(\)（）【】\[\]]+', pname) if len(t) >= 2]
                             if tokens:
                                 matched_tokens = sum(1 for t in tokens if t in q_lower)
@@ -451,8 +556,8 @@ class AIService:
                             best_score = score
                             best_pid = p['product_id']
                     
-                    # Require at least 30% token overlap to consider it a match
-                    if best_score >= 0.3 and best_pid:
+                    # Lower threshold to 20% for better matching
+                    if best_score >= 0.2 and best_pid:
                         matched_product_ids.append(best_pid)
                         logger.info(f"[ProductMatch] Smart matched product '{best_pid}' from message with score {best_score:.2f}")
             
@@ -460,77 +565,108 @@ class AIService:
             if matched_product_ids:
                 logger.info(f"[ProductMatch] Final matched {len(matched_product_ids)} products: {matched_product_ids}")
         
-        # Step 2: Check knowledge base (product-specific first, then general)
-        kb_result = self.knowledge_service.get_best_answer(
-            question, shop_id=shop_id, owner_id=owner_id,
-            product_ids=matched_product_ids
+        kb_matches = self.knowledge_service.search_similar(
+            question, shop_id=shop_id, owner_id=owner_id, product_ids=matched_product_ids, limit=3
         )
         
-        if kb_result and kb_result.get('is_correct'):
-            return {
-                'reply': kb_result['answer'],
-                'source': 'knowledge_base',
-                'confidence': kb_result['similarity'],
-                'cached': False,
-                'kb_id': kb_result['id'],
-            }
+        kb_reference = None
+        if kb_matches:
+            for r in kb_matches:
+                if r.get('is_correct'):
+                    kb_reference = r
+                    break
+            
+            if kb_reference:
+                from apps.knowledge.models import KnowledgeBase
+                KnowledgeBase.objects.filter(id=kb_reference['id']).update(usage_count=F('usage_count') + 1)
+                logger.info(
+                    f"[KB] Found reference answer (similarity={kb_reference.get('similarity', 0):.2f}): "
+                    f"{(kb_reference.get('answer') or '')[:50]}..."
+                )
         
-        # Step 2: Check cache
-        cache_key = f"ai_reply:{md5_hash(question)}"
-        cached_reply = cache.get(cache_key)
-        
-        if cached_reply:
-            return {
-                'reply': cached_reply,
-                'source': 'cache',
-                'confidence': 0.9,
-                'cached': True,
-            }
-        
-        # Step 3: If knowledge base has a similar (but not correct) answer, use it
-        if kb_result and kb_result['similarity'] >= 0.7:
-            reply = kb_result['answer']
-            cache.set(cache_key, reply, self.cache_ttl)
-            return {
-                'reply': reply,
-                'source': 'knowledge_base',
-                'confidence': kb_result['similarity'],
-                'cached': False,
-                'kb_id': kb_result['id'],
-                'needs_verification': True,
-            }
-        
-        # Step 4: Call LLM API with product knowledge context
+        # Step 3: Call LLM API with product knowledge context and KB reference
         # Log which model is being used
         if model:
             logger.info(f"[模型调用] 前端指定模型: '{model}'")
         
-        # Build product knowledge context for LLM
-        product_context = context or ''
+        # Build contexts for LLM
+        conversation_context = context or ''
+        knowledge_parts: List[str] = []
+        source_map = {
+            'manual': '手动录入',
+            'auto_learned': '自动学习',
+            'ai_generated': 'AI生成',
+        }
         if matched_product_ids and shop_id:
             from apps.knowledge.models import KnowledgeBase
             product_qa_items = KnowledgeBase.objects.filter(
                 product_id__in=matched_product_ids, shop_id=shop_id
-            ).values_list('question', 'answer')[:15]
+            ).values('question', 'answer', 'is_correct', 'source')[:15]
             if product_qa_items:
-                qa_text = '\n'.join([f"问: {q}\n答: {a}" for q, a in product_qa_items])
-                product_context = f"{product_context}\n\n【该商品的知识库参考】\n{qa_text}" if product_context else f"【该商品的知识库参考】\n{qa_text}"
+                qa_text = '\n'.join([
+                    f"问: {item.get('question', '')}\n"
+                    f"答: {item.get('answer', '')}\n"
+                    f"(来源: {source_map.get(item.get('source'), item.get('source'))}, 已确认: {'是' if item.get('is_correct') else '否'})"
+                    for item in product_qa_items
+                ])
+                knowledge_parts.append(f"【该商品的知识库参考】\n{qa_text}")
+        
+        if kb_reference:
+            kb_hint = (
+                "【参考答案】\n"
+                f"问: {kb_reference.get('question', '')}\n"
+                f"答: {kb_reference.get('answer', '')}\n"
+                f"(来源: {source_map.get(kb_reference.get('source'), kb_reference.get('source'))}, 已确认: {'是' if kb_reference.get('is_correct') else '否'}, 相似度: {kb_reference.get('similarity', 0):.2f})"
+            )
+            knowledge_parts.append(kb_hint)
+        elif kb_matches:
+            cand_lines = []
+            for i, r in enumerate(kb_matches[:3], start=1):
+                cand_lines.append(
+                    f"{i}. (来源: {source_map.get(r.get('source'), r.get('source'))}, 已确认: {'是' if r.get('is_correct') else '否'}, 相似度: {r.get('similarity', 0):.2f})\n"
+                    f"问: {r.get('question','')}\n"
+                    f"答: {r.get('answer','')}"
+                )
+            knowledge_parts.append("【知识库相似问答】\n" + "\n".join(cand_lines))
+        
+        combined_context = ""
+        if conversation_context:
+            combined_context = f"【对话历史】\n{conversation_context}"
+        if knowledge_parts:
+            knowledge_context = "\n\n".join(knowledge_parts)
+            combined_context = f"{combined_context}\n\n【知识库资料】\n{knowledge_context}" if combined_context else f"【知识库资料】\n{knowledge_context}"
+        
+        if not context and not knowledge_parts:
+            cache_key = f"ai_reply:{md5_hash(question)}"
+            cached_reply = cache.get(cache_key)
+            if cached_reply:
+                return {
+                    'reply': cached_reply,
+                    'source': 'cache',
+                    'confidence': 0.9,
+                    'cached': True,
+                }
         
         try:
             # _call_openai now handles model fallback automatically
-            reply = self._call_openai(question, product_context, order_detail, model=model)
+            reply = self._call_openai(question, combined_context, order_detail, model=model)
             
             if reply:
                 from apps.knowledge.models import KnowledgeBase
-                KnowledgeBase.objects.create(
-                    question=question,
-                    answer=reply,
-                    is_correct=False,
-                    shop_id=shop_id,
-                    owner_id=owner_id,
-                )
+                # Only save to KB if no reference was used (to avoid duplicates)
+                if not kb_reference:
+                    KnowledgeBase.objects.create(
+                        question=question,
+                        answer=reply,
+                        is_correct=False,
+                        source='ai_generated',
+                        shop_id=shop_id,
+                        owner_id=owner_id,
+                    )
                 
-                cache.set(cache_key, reply, self.cache_ttl)
+                if not context:
+                    cache_key = f"ai_reply:{md5_hash(question)}"
+                    cache.set(cache_key, reply, self.cache_ttl)
                 
                 # Check which model was actually used (primary or fallback)
                 actual_model = self._get_available_model(model)
@@ -538,11 +674,17 @@ class AIService:
                 
                 result = {
                     'reply': reply,
-                    'source': 'openai',
-                    'confidence': 0.85,
+                    'source': 'ai_kb' if knowledge_parts else 'openai',
+                    'confidence': 0.9 if kb_reference else (0.86 if knowledge_parts else 0.85),
                     'cached': False,
                     'model_used': actual_model or 'default',
                 }
+                
+                if kb_reference:
+                    result['kb_id'] = kb_reference['id']
+                    result['kb_enhanced'] = True
+                    if kb_reference.get('source') and kb_reference.get('source') != 'manual':
+                        result['needs_verification'] = True
                 
                 if using_fallback:
                     result['model_fallback'] = True
@@ -831,18 +973,21 @@ class AIService:
             )
             
             system_prompt = (
-                "你是一位专业的电商客服助手。请用中文回复客户。\n"
+                "你是一位专业热情的电商客服助手。请用中文回复客户。\n"
                 "回复要求：\n"
-                "1. 简洁礼貌，直接回答客户的问题\n"
-                "2. 严禁编造任何具体参数，包括但不限于：价格、库存、电流、电压、功率、尺寸、重量等技术参数。如果你不确定具体数值，绝对不能用占位符（如XXA、XX元等）回复\n"
-                "3. 如果客户询问的商品参数或信息你不确定，请回复：'亲，建议您参考一下商品详情页，上面有详细的参数标注哦~如有其他问题随时咨询'\n"
-                "4. 如果客户发送的是商品链接或图片，询问客户需要什么帮助\n"
-                "5. 使用亲切的语气，可以用'亲'等电商常用称呼\n"
-                "6. 回复控制在50字以内，简洁明了\n"
-                "7. 只回复你确定知道的信息，不确定的一律引导买家查看商品详情页\n"
-                "8. 如果买家重复提出相同或相似的问题，你必须换一种表达方式来回答，意思保持一致但措辞和句式要有变化，不能和之前的回复雷同。可以换称呼、换句式、换角度来回答\n"
-                "9. 如果提供了订单信息，请结合订单实际状态回答。例如买家问'发货了吗'，如果订单是'已发货'就告知已发货；如果是'待发货'就说明发货时间\n"
-                "10. 如果买家发送了图片，根据上下文判断并适当回应"
+                "1. 仔细理解买家的问题意图，结合对话历史给出有针对性的回答（优先以最近一两条买家消息为主）\n"
+                "2. 如果买家只发送了商品链接或商品卡片，没有提出具体问题，请主动询问需求：'亲，在的，请问您对这款商品有什么想了解的呢？'\n"
+                "3. 如果提供了【知识库资料】或【参考答案】，优先使用其中明确陈述的信息来回答；不匹配当前问题则忽略，自己组织回答\n"
+                "4. 如果知识库资料标注为“自动学习/AI生成”且“未确认”，只把它当作可能线索；不确定就追问1个关键点再回答\n"
+                "5. 如果买家询问产品是否适合某种用途，根据常识和产品类型给出建议性回答\n"
+                "6. 只有涉及精确数值参数（价格、库存、电压、功率等）且你不确定时，才引导查看详情页\n"
+                "7. 使用亲切自然的语气，像真人客服一样交流\n"
+                "8. 回复控制在80字以内，必要时可两句话，不要太生硬\n"
+                "9. 如果买家表达不满或抱怨，先表示理解和歉意，再尝试解决问题\n"
+                "10. 如果买家重复提问，换种表达方式回答\n"
+                "11. 如果提供了订单信息，结合订单状态回答\n"
+                "12. 禁止编造具体数值参数，不确定的数值说'建议您确认一下详情页哦'\n"
+                "13. 禁止说'正在查询'、'请稍等'这类无意义的话，要么直接回答问题，要么询问买家需求"
             )
             
             # Increase temperature for varied responses
@@ -853,10 +998,32 @@ class AIService:
             messages = [{"role": "system", "content": system_prompt}]
             
             if context:
-                messages.append({
-                    "role": "system",
-                    "content": f"以下是与买家的对话历史：\n{context}"
-                })
+                import re
+                conv_text = None
+                kb_text = None
+                
+                m_conv = re.search(r'【对话历史】\n([\s\S]*?)(?=\n\n【知识库资料】\n|$)', context)
+                if m_conv:
+                    conv_text = (m_conv.group(1) or '').strip()
+                
+                m_kb = re.search(r'【知识库资料】\n([\s\S]*)$', context)
+                if m_kb:
+                    kb_text = (m_kb.group(1) or '').strip()
+                
+                if not conv_text and not kb_text:
+                    conv_text = context.strip()
+                
+                if conv_text:
+                    messages.append({
+                        "role": "system",
+                        "content": f"以下是与买家的对话历史（仅用于理解上下文）：\n{conv_text}"
+                    })
+                
+                if kb_text:
+                    messages.append({
+                        "role": "system",
+                        "content": "以下是店铺/商品知识库资料（可作为事实依据；请融合进回复，不要对外提及“知识库”）：\n" + kb_text
+                    })
             
             if varied:
                 messages.append({
@@ -915,18 +1082,27 @@ class AIService:
                 model=config['model'],
                 temperature=temperature,
                 messages=messages,
-                max_tokens=200,
+                max_tokens=260,
             )
             
             if response and response.choices:
                 reply = response.choices[0].message.content.strip()
-                import logging
-                logging.info(f"LLM [{config['provider']}] reply: {reply[:50]}...")
+                
+                # Save token usage
+                if hasattr(response, 'usage') and response.usage:
+                    self._save_token_usage(
+                        prompt_tokens=response.usage.prompt_tokens or 0,
+                        completion_tokens=response.usage.completion_tokens or 0,
+                        total_tokens=response.usage.total_tokens or 0,
+                        model_version=config['model'],
+                        request_type='chat'
+                    )
+                
+                logger.info(f"LLM [{config['provider']}] reply: {reply[:50]}...")
                 return reply
             
         except Exception as e:
-            import logging
-            logging.error(f"LLM API call failed [{config['provider']}]: {e}")
+            logger.error(f"LLM API call failed [{config['provider']}]: {e}")
         
         return None
     
@@ -1032,6 +1208,17 @@ class AIService:
                 if response and response.choices:
                     content = response.choices[0].message.content.strip()
                     logger.info(f"[视觉模型] {vm} 分析完成，返回 {len(content)} 字符")
+                    
+                    # Save token usage for vision model
+                    if hasattr(response, 'usage') and response.usage:
+                        self._save_token_usage(
+                            prompt_tokens=response.usage.prompt_tokens or 0,
+                            completion_tokens=response.usage.completion_tokens or 0,
+                            total_tokens=response.usage.total_tokens or 0,
+                            model_version=model_config['model'],
+                            request_type='vision'
+                        )
+                    
                     return {
                         'success': True,
                         'content': content,

@@ -377,6 +377,96 @@
               </div>
             </div>
 
+            <!-- Settings Tab View -->
+            <div id="settings-view" class="settings-view" style="display: none;">
+              <div class="settings-header">
+                <h2>&#9881; API 配置</h2>
+                <p class="settings-desc">配置 AI 模型提供商和 API 密钥，保存后自动同步到服务器</p>
+              </div>
+
+              <div class="settings-form-container">
+                <form id="api-settings-form" class="api-settings-form">
+                  
+                  <!-- Provider Selection -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">模型提供商</label>
+                    <div class="api-form-field">
+                      <select name="llm_provider" id="settings-provider" class="api-select">
+                        <option value="deepseek">DeepSeek (推荐)</option>
+                        <option value="qwen">通义千问 (Qwen)</option>
+                        <option value="doubao">豆包 (Doubao)</option>
+                        <option value="openai">OpenAI</option>
+                        <option value="gemini">Gemini</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- API Key Input -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">API Key</label>
+                    <div class="api-form-field api-field-password">
+                      <input type="password" name="api_key" id="settings-api-key" 
+                             placeholder="请输入 API Key" class="api-input" />
+                      <span class="api-pwd-toggle" id="settings-pwd-toggle" title="显示密钥">&#128065;</span>
+                    </div>
+                  </div>
+
+                  <!-- Model Selection -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">模型</label>
+                    <div class="api-form-field">
+                      <select name="llm_model" id="settings-model" class="api-select">
+                        <!-- Options will be populated dynamically -->
+                      </select>
+                    </div>
+                  </div>
+
+                  <!-- Base URL (Optional) -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">API Base URL</label>
+                    <div class="api-form-field">
+                      <input type="text" name="llm_base_url" id="settings-base-url" 
+                             placeholder="留空使用默认地址" class="api-input" />
+                      <span class="api-hint" id="settings-base-url-hint">默认：https://api.deepseek.com/v1</span>
+                    </div>
+                  </div>
+
+                  <!-- Temperature Slider -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">温度参数</label>
+                    <div class="api-form-field api-field-slider">
+                      <input type="range" name="llm_temperature" id="settings-temperature" 
+                             min="0" max="1" step="0.1" value="0.3" class="api-slider" />
+                      <span class="api-slider-value" id="settings-temperature-value">0.3</span>
+                    </div>
+                    <span class="api-hint">值越高回复越有创意，值越低回复越稳定</span>
+                  </div>
+
+                  <!-- Similarity Threshold Slider -->
+                  <div class="api-form-row">
+                    <label class="api-form-label">相似度阈值</label>
+                    <div class="api-form-field api-field-slider">
+                      <input type="range" name="kb_similarity_threshold" id="settings-similarity" 
+                             min="0.5" max="1" step="0.05" value="0.7" class="api-slider" />
+                      <span class="api-slider-value" id="settings-similarity-value">0.7</span>
+                    </div>
+                    <span class="api-hint">知识库匹配的最低相似度，值越高匹配越严格</span>
+                  </div>
+
+                  <!-- Submit Buttons -->
+                  <div class="api-form-footer">
+                    <button type="button" id="settings-reset-btn" class="api-btn api-btn-secondary">
+                      重置
+                    </button>
+                    <button type="submit" id="settings-save-btn" class="api-btn api-btn-primary">
+                      保存设置
+                    </button>
+                  </div>
+
+                </form>
+              </div>
+            </div>
+
             <!-- Monitoring Tab View -->
             <div id="monitoring-view" class="monitoring-view" style="display: none;">
               <div class="monitoring-header">

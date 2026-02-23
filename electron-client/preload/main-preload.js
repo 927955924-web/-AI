@@ -86,6 +86,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
     delete: (ruleId) => ipcRenderer.invoke('scenario-rules:delete', ruleId)
   },
 
+  // API Settings (for configuring LLM providers and API keys)
+  api: {
+    getApiSettings: () => ipcRenderer.invoke('api:getSettings'),
+    saveApiSettings: (data) => ipcRenderer.invoke('api:saveSettings', data)
+  },
+
   // Message events
   messages: {
     onReceived: (callback) => {
@@ -99,6 +105,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
     },
     onLogWarn: (callback) => {
       ipcRenderer.on('log:warn', (event, data) => callback(data));
+    },
+    onProcessLog: (callback) => {
+      ipcRenderer.on('message:process-log', (event, data) => callback(data));
     },
     onLoginSuccess: (callback) => {
       ipcRenderer.on('shop:login-success', (event, data) => callback(data));

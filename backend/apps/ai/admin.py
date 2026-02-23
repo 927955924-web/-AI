@@ -4,24 +4,24 @@ from .models import ConversationRecord, KeywordRule, SensitiveWordRule, Scenario
 
 @admin.register(ConversationRecord)
 class ConversationRecordAdmin(admin.ModelAdmin):
-    list_display = ['customer_name', 'shop', 'created_at']
+    list_display = ['buyer_name', 'shop', 'created_at']
     list_filter = ['shop']
-    search_fields = ['customer_name', 'customer_message', 'ai_response']
+    search_fields = ['buyer_name', 'buyer_message', 'customer_reply']
     readonly_fields = ['created_at']
 
 
 @admin.register(KeywordRule)
 class KeywordRuleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'keyword', 'is_active', 'priority']
+    list_display = ['name', 'keywords', 'is_active', 'priority']
     list_filter = ['is_active']
-    search_fields = ['name', 'keyword']
+    search_fields = ['name', 'keywords']
 
 
 @admin.register(SensitiveWordRule)
 class SensitiveWordRuleAdmin(admin.ModelAdmin):
-    list_display = ['word', 'action', 'is_active']
-    list_filter = ['action', 'is_active']
-    search_fields = ['word']
+    list_display = ['name', 'sensitive_words', 'replacement', 'is_active']
+    list_filter = ['is_active']
+    search_fields = ['name', 'sensitive_words']
 
 
 @admin.register(ScenarioRule)

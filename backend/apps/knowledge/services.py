@@ -121,6 +121,30 @@ class KnowledgeService:
         self.use_vector_search = use_vector_search
         self._embedding_service = None
     
+    def _extract_query_terms(self, question: str) -> List[str]:
+        cleaned = self.clean_text(question)
+        if not cleaned:
+            return []
+        
+        import re
+        stopwords = {
+            '亲', '你好', '您好', '麻烦', '请问', '请', '帮我', '一下', '这个', '这款', '那款', '能', '可以', '能不能',
+            '怎么', '如何', '是什么', '有没有', '是否', '吗', '呢', '呀', '啊', '哦', '哈', '吧', '么', '的', '了', '在',
+            '和', '与', '及', '就', '还', '都', '很', '非常', '比较', '大概', '多少', '几', '一个', '两个', '这', '那',
+        }
+        
+        chunks = re.findall(r'[0-9a-zA-Z\u4e00-\u9fff]+', cleaned)
+        terms: List[str] = []
+        for c in chunks:
+            c = c.strip()
+            if not c or c in stopwords:
+                continue
+            if len(c) >= 2:
+                terms.append(c)
+        
+        terms.sort(key=lambda x: (len(x), any(ch.isdigit() for ch in x), any('a' <= ch.lower() <= 'z' for ch in x)), reverse=True)
+        return list(dict.fromkeys(terms))[:6]
+    
     @property
     def embedding_service(self) -> EmbeddingService:
         """Lazy load embedding service."""
@@ -180,6 +204,7 @@ class KnowledgeService:
                     'question': item.question,
                     'answer': item.answer,
                     'is_correct': item.is_correct,
+                    'source': item.source,
                     'similarity': similarity,
                     'usage_count': item.usage_count,
                     'search_method': 'vector',
@@ -215,16 +240,22 @@ class KnowledgeService:
         seen_ids = set()
         
         # Build base query filters
-        base_filters = Q()
+        base_filters = Q(shop__isnull=True, owner__isnull=True)
         if shop_id:
             base_filters |= Q(shop_id=shop_id)
         if owner_id:
             base_filters |= Q(owner_id=owner_id)
-        base_filters |= Q(shop__isnull=True, owner__isnull=True)
+        
+        terms = self._extract_query_terms(question)
+        term_filters = Q()
+        for t in terms:
+            term_filters |= Q(question__icontains=t) | Q(keywords__icontains=t)
+        if not term_filters:
+            term_filters = Q(question__icontains=question) | Q(keywords__icontains=question)
         
         # === Phase 1: Product-specific search (if product_ids provided) ===
         if product_ids:
-            product_items = list(KnowledgeBase.objects.filter(product_id__in=product_ids)[:100])
+            product_items = list(KnowledgeBase.objects.filter(product_id__in=product_ids).filter(base_filters)[:100])
             
             # Try vector search on product items first
             if self.use_vector_search and self.embedding_service.is_available and product_items:
@@ -238,10 +269,7 @@ class KnowledgeService:
             if len(results) < limit:
                 product_keyword_matches = KnowledgeBase.objects.filter(
                     product_id__in=product_ids
-                ).filter(
-                    Q(question__icontains=question) | 
-                    Q(keywords__icontains=question)
-                ).exclude(id__in=seen_ids)
+                ).filter(base_filters).filter(term_filters).exclude(id__in=seen_ids)
                 
                 for item in product_keyword_matches[:limit - len(results)]:
                     similarity = levenshtein_ratio(cleaned_question, self.clean_text(item.question))
@@ -250,6 +278,7 @@ class KnowledgeService:
                         'question': item.question,
                         'answer': item.answer,
                         'is_correct': item.is_correct,
+                        'source': item.source,
                         'similarity': max(similarity, 0.85),
                         'usage_count': item.usage_count,
                         'search_method': 'keyword',
@@ -260,7 +289,7 @@ class KnowledgeService:
             if len(results) < limit:
                 remaining_product_items = KnowledgeBase.objects.filter(
                     product_id__in=product_ids
-                ).exclude(id__in=seen_ids)[:50]
+                ).filter(base_filters).exclude(id__in=seen_ids)[:50]
                 
                 for item in remaining_product_items:
                     cleaned_item_question = self.clean_text(item.question)
@@ -272,6 +301,7 @@ class KnowledgeService:
                             'question': item.question,
                             'answer': item.answer,
                             'is_correct': item.is_correct,
+                            'source': item.source,
                             'similarity': similarity + 0.05,
                             'usage_count': item.usage_count,
                             'search_method': 'levenshtein',
@@ -296,10 +326,7 @@ class KnowledgeService:
             
             # Keyword matches
             if len(results) < limit:
-                keyword_matches = general_items.filter(
-                    Q(question__icontains=question) | 
-                    Q(keywords__icontains=question)
-                ).exclude(id__in=seen_ids)
+                keyword_matches = general_items.filter(term_filters).exclude(id__in=seen_ids)
                 
                 for item in keyword_matches[:limit - len(results)]:
                     similarity = levenshtein_ratio(cleaned_question, self.clean_text(item.question))
@@ -308,6 +335,7 @@ class KnowledgeService:
                         'question': item.question,
                         'answer': item.answer,
                         'is_correct': item.is_correct,
+                        'source': item.source,
                         'similarity': max(similarity, 0.8),
                         'usage_count': item.usage_count,
                         'search_method': 'keyword',
@@ -327,6 +355,7 @@ class KnowledgeService:
                             'question': item.question,
                             'answer': item.answer,
                             'is_correct': item.is_correct,
+                            'source': item.source,
                             'similarity': similarity,
                             'usage_count': item.usage_count,
                             'search_method': 'levenshtein',

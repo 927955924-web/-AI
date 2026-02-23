@@ -209,18 +209,45 @@ class ApiSettingsView(APIView):
         'openai_api_key', 'gemini_api_key',
     }
 
+    # Mapping from setting key to environment variable name
+    ENV_MAPPING = {
+        'llm_provider': 'LLM_PROVIDER',
+        'llm_model': 'LLM_MODEL',
+        'llm_temperature': 'LLM_TEMPERATURE',
+        'llm_base_url': 'LLM_BASE_URL',
+        'deepseek_api_key': 'DEEPSEEK_API_KEY',
+        'qwen_api_key': 'QWEN_API_KEY',
+        'doubao_api_key': 'DOUBAO_API_KEY',
+        'openai_api_key': 'OPENAI_API_KEY',
+        'gemini_api_key': 'GEMINI_API_KEY',
+        'kb_similarity_threshold': 'KB_SIMILARITY_THRESHOLD',
+    }
+
     def get(self, request):
+        import os
         settings = {}
-        for item in SystemSettings.objects.filter(key__in=self.SETTING_KEYS):
-            if item.key in self.SECRET_KEYS and item.value:
+        
+        # Load from SystemSettings database
+        db_settings = {
+            item.key: item.value
+            for item in SystemSettings.objects.filter(key__in=self.SETTING_KEYS)
+        }
+        
+        # Merge: DB takes priority, fallback to environment variables
+        for key in self.SETTING_KEYS:
+            value = db_settings.get(key)
+            if not value and key in self.ENV_MAPPING:
+                value = os.environ.get(self.ENV_MAPPING[key], '')
+            
+            if key in self.SECRET_KEYS and value:
                 # Mask secret keys: show first 6 and last 4 chars
-                v = item.value
-                if len(v) > 12:
-                    settings[item.key] = v[:6] + '****' + v[-4:]
+                if len(value) > 12:
+                    settings[key] = value[:6] + '****' + value[-4:]
                 else:
-                    settings[item.key] = '****'
+                    settings[key] = '****'
             else:
-                settings[item.key] = item.value
+                settings[key] = value or ''
+        
         return Response({'success': True, 'data': settings})
 
     def put(self, request):
@@ -252,18 +279,7 @@ class ApiSettingsView(APIView):
     def _sync_to_env(self, data):
         """Sync relevant settings to os.environ so the AI service picks them up."""
         import os
-        env_mapping = {
-            'llm_provider': 'LLM_PROVIDER',
-            'llm_model': 'LLM_MODEL',
-            'llm_temperature': 'LLM_TEMPERATURE',
-            'deepseek_api_key': 'DEEPSEEK_API_KEY',
-            'qwen_api_key': 'QWEN_API_KEY',
-            'doubao_api_key': 'DOUBAO_API_KEY',
-            'openai_api_key': 'OPENAI_API_KEY',
-            'gemini_api_key': 'GEMINI_API_KEY',
-            'kb_similarity_threshold': 'KB_SIMILARITY_THRESHOLD',
-        }
-        for key, env_key in env_mapping.items():
+        for key, env_key in self.ENV_MAPPING.items():
             if key in data:
                 value = str(data[key]).strip()
                 if key in self.SECRET_KEYS and '****' in value:

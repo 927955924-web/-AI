@@ -16,4 +16,8 @@ export const statisticsApi = {
   shop(shopId) {
     return request.get(`/stats/shops/${shopId}/`)
   },
+  
+  tokenUsage(params = {}) {
+    return request.get('/stats/token-usage/', { params })
+  },
 }

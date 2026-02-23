@@ -89,7 +89,8 @@ class ApiService {
         shop_id: data.shop_id,
         order_detail: data.order_detail,
         model: data.model,
-        product_names: data.product_names || []
+        product_names: data.product_names || [],
+        product_card_ids: data.product_card_ids || []
       });
       return response.data;
     } catch (error) {
@@ -757,6 +758,32 @@ class ApiService {
       return { success: true };
     } catch (error) {
       return { success: false, error: error.response?.data?.detail || error.message };
+    }
+  }
+
+  // ============ API Settings Management ============
+
+  async getApiSettings() {
+    try {
+      const response = await this.client.get('/auth/api-settings/');
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.response?.data?.detail || error.message
+      };
+    }
+  }
+
+  async saveApiSettings(data) {
+    try {
+      const response = await this.client.put('/auth/api-settings/', data);
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.response?.data?.detail || error.message
+      };
     }
   }
 }

@@ -73,12 +73,19 @@ async function init() {
     setupEventListeners();
     setupMessageHandlers();
     setupUpdateHandlers();
+    initApiSettingsListeners();
 
     // Check if already logged in
     const tokens = await window.electronAPI.store.get('tokens');
     if (tokens) {
       console.log('[UI] Found stored tokens, loading dashboard...');
       loginModal.style.display = 'none';
+      const storedUsername = await window.electronAPI.store.get('username');
+      if (storedUsername) {
+        document.getElementById('user-display').textContent = storedUsername;
+      } else {
+        document.getElementById('user-display').textContent = '已登录';
+      }
       await loadShops();
       appState.isLoggedIn = true;
       addLogMessage('system', '已自动登录');
@@ -295,6 +302,11 @@ function setupMessageHandlers() {
     addLogMessage('error', msg);
   });
 
+  // AI processing flow logs
+  window.electronAPI.messages.onProcessLog((data) => {
+    addLogMessage('system', data.message);
+  });
+
   // Platform login success - update shop status to "已登录"
   window.electronAPI.messages.onLoginSuccess((data) => {
     const { platformId } = data;
@@ -331,7 +343,9 @@ async function handleLogin() {
 
   if (result.success) {
     appState.isLoggedIn = true;
-    document.getElementById('user-display').textContent = result.data.user.username;
+    const username = result.data.user.username;
+    document.getElementById('user-display').textContent = username;
+    await window.electronAPI.store.set('username', username);
     loginModal.style.display = 'none';
     await loadShops();
     addLogMessage('system', '登录成功');
@@ -2001,10 +2015,12 @@ function switchTab(tabName) {
   // Hide all views first
   const keywordsView = document.getElementById('keywords-view');
   const monitoringView = document.getElementById('monitoring-view');
+  const settingsView = document.getElementById('settings-view');
   
   workspaceView.style.display = 'none';
   if (keywordsView) keywordsView.style.display = 'none';
   if (monitoringView) monitoringView.style.display = 'none';
+  if (settingsView) settingsView.style.display = 'none';
   window.electronAPI.shops.hide();
 
   if (tabName === 'workspace') {
@@ -2023,6 +2039,11 @@ function switchTab(tabName) {
     if (monitoringView) {
       monitoringView.style.display = 'block';
       loadScenarioRules();
+    }
+  } else if (tabName === 'settings') {
+    if (settingsView) {
+      settingsView.style.display = 'block';
+      loadApiSettings();
     }
   } else {
     workspaceView.style.display = 'block';
@@ -2761,6 +2782,268 @@ function setupUpdateHandlers() {
   updateDismissBtn.addEventListener('click', () => {
     updateBar.style.display = 'none';
   });
+}
+
+// ============================================
+// API Settings Management
+// ============================================
+
+const apiSettingsState = {
+  provider: 'deepseek',
+  apiKeys: {
+    deepseek_api_key: '',
+    qwen_api_key: '',
+    doubao_api_key: '',
+    openai_api_key: '',
+    gemini_api_key: ''
+  },
+  providerModels: {
+    deepseek: [
+      { label: 'DeepSeek Chat (V3)', value: 'deepseek-chat' },
+      { label: 'DeepSeek Reasoner (R1)', value: 'deepseek-reasoner' }
+    ],
+    qwen: [
+      { label: 'Qwen Turbo', value: 'qwen-turbo' },
+      { label: 'Qwen Plus', value: 'qwen-plus' },
+      { label: 'Qwen Max', value: 'qwen-max' },
+      { label: 'Qwen Long', value: 'qwen-long' }
+    ],
+    doubao: [
+      { label: '豆包 Seed 1.6', value: 'doubao-seed-1.6' },
+      { label: '豆包 Pro 32K', value: 'doubao-pro-32k' },
+      { label: '豆包 Lite 32K', value: 'doubao-lite-32k' }
+    ],
+    openai: [
+      { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
+      { label: 'GPT-4o', value: 'gpt-4o' },
+      { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
+      { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }
+    ],
+    gemini: [
+      { label: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
+      { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' },
+      { label: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash' }
+    ]
+  },
+  defaultBaseUrls: {
+    deepseek: 'https://api.deepseek.com/v1',
+    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
+    doubao: 'https://ark.cn-beijing.volces.com/api/v3',
+    openai: 'https://api.openai.com/v1',
+    gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/'
+  },
+  providerKeyField: {
+    deepseek: 'deepseek_api_key',
+    qwen: 'qwen_api_key',
+    doubao: 'doubao_api_key',
+    openai: 'openai_api_key',
+    gemini: 'gemini_api_key'
+  }
+};
+
+// Initialize API Settings Event Listeners
+function initApiSettingsListeners() {
+  const form = document.getElementById('api-settings-form');
+  if (!form) return;
+
+  const providerSelect = document.getElementById('settings-provider');
+  const modelSelect = document.getElementById('settings-model');
+  const apiKeyInput = document.getElementById('settings-api-key');
+  const baseUrlHint = document.getElementById('settings-base-url-hint');
+  const temperatureSlider = document.getElementById('settings-temperature');
+  const temperatureValue = document.getElementById('settings-temperature-value');
+  const similaritySlider = document.getElementById('settings-similarity');
+  const similarityValue = document.getElementById('settings-similarity-value');
+  const pwdToggle = document.getElementById('settings-pwd-toggle');
+  const resetBtn = document.getElementById('settings-reset-btn');
+
+  // Provider change handler
+  providerSelect.addEventListener('change', () => {
+    const provider = providerSelect.value;
+    apiSettingsState.provider = provider;
+    
+    // Update model options
+    updateModelOptions(provider);
+    
+    // Update base URL hint
+    baseUrlHint.textContent = '默认：' + apiSettingsState.defaultBaseUrls[provider];
+    
+    // Update API key field
+    const keyField = apiSettingsState.providerKeyField[provider];
+    apiKeyInput.value = apiSettingsState.apiKeys[keyField] || '';
+  });
+
+  // Temperature slider
+  temperatureSlider.addEventListener('input', (e) => {
+    temperatureValue.textContent = e.target.value;
+  });
+
+  // Similarity slider
+  similaritySlider.addEventListener('input', (e) => {
+    similarityValue.textContent = e.target.value;
+  });
+
+  // Password toggle
+  pwdToggle.addEventListener('click', () => {
+    const type = apiKeyInput.type === 'password' ? 'text' : 'password';
+    apiKeyInput.type = type;
+    pwdToggle.style.opacity = type === 'text' ? '0.8' : '0.5';
+  });
+
+  // Form submit
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    await saveApiSettings();
+  });
+
+  // Reset button
+  resetBtn.addEventListener('click', () => {
+    loadApiSettings();
+  });
+
+  // Initialize model options for default provider
+  updateModelOptions(apiSettingsState.provider);
+}
+
+// Update model options based on selected provider
+function updateModelOptions(provider) {
+  const modelSelect = document.getElementById('settings-model');
+  if (!modelSelect) return;
+  
+  const models = apiSettingsState.providerModels[provider] || [];
+  
+  modelSelect.innerHTML = models.map(m => 
+    '<option value="' + m.value + '">' + m.label + '</option>'
+  ).join('');
+}
+
+// Load API settings from backend
+async function loadApiSettings() {
+  const form = document.getElementById('api-settings-form');
+  const saveBtn = document.getElementById('settings-save-btn');
+  if (!form || !saveBtn) return;
+  
+  saveBtn.disabled = true;
+  saveBtn.textContent = '加载中...';
+  
+  try {
+    const result = await window.electronAPI.api.getApiSettings();
+    
+    if (result.success && result.data) {
+      const data = result.data;
+      
+      // Set provider
+      const provider = data.llm_provider || 'deepseek';
+      apiSettingsState.provider = provider;
+      form.llm_provider.value = provider;
+      
+      // Update models and select
+      updateModelOptions(provider);
+      if (data.llm_model) {
+        form.llm_model.value = data.llm_model;
+      }
+      
+      // Store all API keys (may be masked)
+      ['deepseek_api_key', 'qwen_api_key', 'doubao_api_key', 'openai_api_key', 'gemini_api_key'].forEach(key => {
+        if (data[key]) {
+          apiSettingsState.apiKeys[key] = data[key];
+        }
+      });
+      
+      // Display current provider's key
+      const keyField = apiSettingsState.providerKeyField[provider];
+      form.api_key.value = apiSettingsState.apiKeys[keyField] || '';
+      
+      // Set other fields
+      form.llm_base_url.value = data.llm_base_url || '';
+      form.llm_temperature.value = data.llm_temperature || '0.3';
+      document.getElementById('settings-temperature-value').textContent = form.llm_temperature.value;
+      
+      form.kb_similarity_threshold.value = data.kb_similarity_threshold || '0.7';
+      document.getElementById('settings-similarity-value').textContent = form.kb_similarity_threshold.value;
+      
+      // Update base URL hint
+      document.getElementById('settings-base-url-hint').textContent = 
+        '默认：' + apiSettingsState.defaultBaseUrls[provider];
+      
+      addLogMessage('system', 'API 设置已加载');
+    } else {
+      addLogMessage('error', '加载 API 设置失败: ' + (result.error || '未知错误'));
+    }
+  } catch (error) {
+    console.error('[Settings] Failed to load:', error);
+    addLogMessage('error', '加载 API 设置出错: ' + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '保存设置';
+  }
+}
+
+// Save API settings to backend
+async function saveApiSettings() {
+  const form = document.getElementById('api-settings-form');
+  const saveBtn = document.getElementById('settings-save-btn');
+  if (!form || !saveBtn) return;
+  
+  saveBtn.disabled = true;
+  saveBtn.textContent = '保存中...';
+  
+  try {
+    const provider = form.llm_provider.value;
+    const apiKey = form.api_key.value.trim();
+    
+    // Validate API key - if it contains **** it's a masked key, user hasn't changed it
+    if (!apiKey) {
+      addLogMessage('error', '请输入 API Key');
+      saveBtn.disabled = false;
+      saveBtn.textContent = '保存设置';
+      return;
+    }
+    
+    // Update apiKeys state (only if it's a new key, not masked)
+    const keyField = apiSettingsState.providerKeyField[provider];
+    if (!apiKey.includes('****')) {
+      apiSettingsState.apiKeys[keyField] = apiKey;
+    }
+    
+    // Prepare payload - only include non-masked keys
+    const payload = {
+      llm_provider: provider,
+      llm_model: form.llm_model.value,
+      llm_base_url: form.llm_base_url.value.trim(),
+      llm_temperature: form.llm_temperature.value,
+      kb_similarity_threshold: form.kb_similarity_threshold.value
+    };
+    
+    // Add API keys that are not masked
+    Object.keys(apiSettingsState.apiKeys).forEach(key => {
+      const value = apiSettingsState.apiKeys[key];
+      if (value && !value.includes('****')) {
+        payload[key] = value;
+      }
+    });
+    
+    // Also add the current key if it's new
+    if (!apiKey.includes('****')) {
+      payload[keyField] = apiKey;
+    }
+    
+    const result = await window.electronAPI.api.saveApiSettings(payload);
+    
+    if (result.success) {
+      addLogMessage('system', result.message || 'API 设置已保存');
+      // Reload to get masked keys
+      await loadApiSettings();
+    } else {
+      addLogMessage('error', '保存失败: ' + (result.error || '未知错误'));
+    }
+  } catch (error) {
+    console.error('[Settings] Failed to save:', error);
+    addLogMessage('error', '保存 API 设置出错: ' + error.message);
+  } finally {
+    saveBtn.disabled = false;
+    saveBtn.textContent = '保存设置';
+  }
 }
 
 // ============ Initialize on Load ============

@@ -183,10 +183,31 @@ const generateAIReply = async () => {
   
   generating.value = true
   try {
+    const maxMessages = 20
+    const maxContextLength = 1800
+    const recentMessages = chatStore.messages
+      .filter(m => m.sender_type !== 'system')
+      .slice(-maxMessages)
+    
+    const lines = recentMessages
+      .map(m => {
+        const role = m.sender_type === 'customer' ? '买家' : '客服'
+        const text = (m.content || '').replace(/\s+/g, ' ').trim()
+        return text ? `${role}: ${text}` : ''
+      })
+      .filter(Boolean)
+    
+    let context = lines.join('\n')
+    while (context.length > maxContextLength && lines.length > 1) {
+      lines.shift()
+      context = lines.join('\n')
+    }
+    
     const response = await aiApi.generateReply({
       question: lastMessage.content,
       session_id: sessionId,
       shop_id: session.value?.shop,
+      context,
     })
     
     if (response.success) {

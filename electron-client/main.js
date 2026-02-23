@@ -2,6 +2,33 @@
  * Electron Main Process
  * E-commerce Customer Service Automation Client
  */
+
+// Handle EPIPE errors that occur when stdout is not available (e.g., when launched via double-click on Windows)
+// This must be at the very top before any console.log calls
+process.on('uncaughtException', (err) => {
+  if (err.code === 'EPIPE' || err.message.includes('EPIPE')) {
+    // Silently ignore EPIPE errors - they occur when stdout pipe is broken
+    return;
+  }
+  // For other uncaught exceptions, log and exit
+  console.error('Uncaught exception:', err);
+  process.exit(1);
+});
+
+process.stdout.on('error', (err) => {
+  if (err.code === 'EPIPE') {
+    // Silently ignore EPIPE on stdout
+    return;
+  }
+});
+
+process.stderr.on('error', (err) => {
+  if (err.code === 'EPIPE') {
+    // Silently ignore EPIPE on stderr
+    return;
+  }
+});
+
 const { app, BrowserWindow, BrowserView, ipcMain, session, Menu } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
@@ -751,12 +778,8 @@ ipcMain.handle('shops:select', async (event, shop) => {
       }
     } else {
       // Standard BrowserView platform
-      // If a view already exists (shop is running), show it; otherwise just hide
-      if (platformViews[electronPlatform]) {
-        showPlatformView(electronPlatform);
-      } else {
-        hidePlatformViews();
-      }
+      // Always show the platform view (create if needed)
+      showPlatformView(electronPlatform);
     }
 
     // Get credentials from local store
@@ -1131,6 +1154,26 @@ ipcMain.handle('scenario-rules:delete', async (event, ruleId) => {
   }
 });
 
+// ============ API Settings IPC ============
+
+ipcMain.handle('api:getSettings', async () => {
+  try {
+    if (!apiService) return { success: false, error: 'API service not initialized' };
+    return await apiService.getApiSettings();
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('api:saveSettings', async (event, data) => {
+  try {
+    if (!apiService) return { success: false, error: 'API service not initialized' };
+    return await apiService.saveApiSettings(data);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Generate AI reply
 ipcMain.handle('ai:generate-reply', async (event, data) => {
   try {
@@ -1236,6 +1279,11 @@ ipcMain.on('platform:new-message', async (event, data) => {
   try {
     console.log(`[${platformId}] Calling AI generate-reply API...`);
     
+    // Send process log to renderer - Step 1: Starting AI
+    if (mainWindow) {
+      mainWindow.webContents.send('message:process-log', { message: `[AI] 启用AI大模型，分析客户请求...` });
+    }
+    
     // Get AI model from shop config
     const aiModel = currentShop?.config_json?.ai_model || '';
     if (aiModel) {
@@ -1262,12 +1310,12 @@ ipcMain.on('platform:new-message', async (event, data) => {
             event.sender.send('platform:get-order-info', { requestId });
           }),
           new Promise((resolve) => setTimeout(() => {
-            console.log(`[${platformId}] OrderDetect extraction timeout (2s)`);
+            console.log(`[${platformId}] OrderDetect extraction timeout (3.5s)`);
             resolve(null);
-          }, 2000))
+          }, 3500))
         ]);
         if (orderDetail) {
-          console.log(`[${platformId}] Order info extracted:`, JSON.stringify(orderDetail).substring(0, 200));
+          console.log(`[${platformId}] Order info extracted:`, JSON.stringify(orderDetail).substring(0, 500));
         } else {
           console.log(`[${platformId}] No order info found on page`);
         }
@@ -1278,6 +1326,9 @@ ipcMain.on('platform:new-message', async (event, data) => {
     }
     
     // Generate AI reply with full conversation context
+    if (mainWindow) {
+      mainWindow.webContents.send('message:process-log', { message: `[AI] 检索知识库，生成回复...` });
+    }
     const result = await apiService.generateReply({
       question: message,
       shop_id: currentShop?.shopId,
@@ -1285,14 +1336,31 @@ ipcMain.on('platform:new-message', async (event, data) => {
       model: aiModel,
       order_detail: orderDetail,
       product_names: data.productNames || [],
+      product_card_ids: data.productCardIds || [],  // Product IDs from chat cards
       buyer_images: buyerImages || []  // Pass buyer-sent images for vision analysis
     });
     
-    console.log(`[${platformId}] API result:`, JSON.stringify(result));
+    // Log AI model call result clearly
+    const modelName = aiModel || result.data?.model_used || 'default';
+    if (result.success && result.data) {
+      console.log(`[${platformId}] ✓ 模型调用成功 [${modelName}] 来源: ${result.data.source || 'ai'}, 置信度: ${result.data.confidence || '-'}`);
+      // Send success log to renderer
+      if (mainWindow) {
+        const sourceText = result.data.source === 'knowledge_base' ? '知识库匹配' : 
+                           result.data.source === 'cache' ? '缓存命中' : 
+                           `${modelName} 生成`;
+        mainWindow.webContents.send('message:process-log', { message: `[AI] ✓ ${sourceText}，准备发送回复...` });
+      }
+    } else {
+      console.error(`[${platformId}] ✗ 模型调用失败 [${modelName}] 错误: ${result.error || '未知错误'}`);
+      if (mainWindow) {
+        mainWindow.webContents.send('message:process-log', { message: `[AI] ✗ 模型调用失败: ${result.error || '未知错误'}` });
+      }
+    }
     
     // Check if model was unavailable
     if (result.success && result.data && result.data.model_unavailable) {
-      console.warn(`[${platformId}] [模型不可用] ${result.data.model_error}`);
+      console.warn(`[${platformId}] ⚠ 模型不可用 [${modelName}]: ${result.data.model_error}`);
       // Notify renderer about model unavailability
       if (mainWindow) {
         mainWindow.webContents.send('log:warn', `[模型不可用] ${result.data.model_error}`);
@@ -1300,7 +1368,7 @@ ipcMain.on('platform:new-message', async (event, data) => {
     }
     
     if (result.success && result.data && result.data.reply) {
-      console.log(`[${platformId}] Sending reply (source: ${result.data.source}, model: ${result.data.model_used || 'default'}): ${result.data.reply}`);
+      console.log(`[${platformId}] → 发送回复 [${modelName}]: ${result.data.reply}`);
       
       // [DebugMode] Check if debug mode is enabled
       const debugMode = store.get('debugMode');
@@ -1356,12 +1424,19 @@ ipcMain.on('platform:new-message', async (event, data) => {
         source: result.data.source
       });
       
-      // Notify renderer
+      // Send completion log to renderer
+      if (mainWindow) {
+        mainWindow.webContents.send('message:process-log', { message: `[AI] ✓ 回复已发送` });
+      }
+      
+      // Notify renderer with model info
       if (mainWindow) {
         mainWindow.webContents.send('message:replied', {
           ...data,
           reply: result.data.reply,
-          source: result.data.source
+          source: result.data.source,
+          modelUsed: result.data.model_used || aiModel || 'default',
+          confidence: result.data.confidence || 0
         });
       }
       

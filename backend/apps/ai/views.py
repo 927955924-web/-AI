@@ -47,6 +47,7 @@ class GenerateReplyView(APIView):
         order_detail = serializer.validated_data.get('order_detail')
         model = serializer.validated_data.get('model')
         product_names = serializer.validated_data.get('product_names', [])
+        product_card_ids = serializer.validated_data.get('product_card_ids', [])
         buyer_images = serializer.validated_data.get('buyer_images', [])
         
         service = AIService()
@@ -115,6 +116,7 @@ class GenerateReplyView(APIView):
             owner_id=request.user.id,
             model=model,
             product_names=product_names,
+            product_card_ids=product_card_ids,
         )
         
         return Response({

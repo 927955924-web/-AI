@@ -17,6 +17,10 @@ class GenerateReplySerializer(serializers.Serializer):
     product_names = serializers.ListField(
         child=serializers.CharField(), required=False, default=list
     )
+    product_card_ids = serializers.ListField(
+        child=serializers.CharField(), required=False, default=list,
+        help_text="Product IDs extracted from product cards in chat"
+    )
     buyer_images = serializers.ListField(
         child=serializers.CharField(), required=False, default=list,
         help_text="URLs of images sent by buyer for vision analysis"

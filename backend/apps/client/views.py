@@ -89,6 +89,7 @@ class SyncMessageView(APIView):
                 session=session,
                 sender_type='ai' if reply_source != 'manual' else 'agent',
                 content=reply_text,
+                ai_source=reply_source if reply_source != 'manual' else '',
                 metadata={'source': reply_source}
             )
         

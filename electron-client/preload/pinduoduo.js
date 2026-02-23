@@ -60,6 +60,18 @@ function findElement(strategies) {
   return null;
 }
 
+/**
+ * Check if a DOM element is actually visible on the page
+ */
+function isElementVisible(el) {
+  if (!el) return false;
+  // Check offsetHeight/offsetWidth (0 = hidden)
+  if (el.offsetHeight === 0 && el.offsetWidth === 0) return false;
+  const style = window.getComputedStyle(el);
+  if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+  return true;
+}
+
 function findElements(strategies) {
   for (const selector of strategies) {
     try {
@@ -552,6 +564,59 @@ function extractMessageText(el) {
   timeEls.forEach(t => t.remove());
 
   return clone.textContent.trim();
+}
+
+/**
+ * Extract product card IDs from recent chat messages
+ * Looks for patterns like "商品ID: 633766363069" in product cards
+ */
+function extractProductCardIds() {
+  const productIds = [];
+  
+  // Find all message elements in chat
+  const messageSelectors = [
+    '[class*="msg-item"]',
+    '[class*="message-item"]',
+    '[class*="chat-msg"]',
+    '[class*="bubble"]',
+    '[class*="msg-row"]',
+    '[class*="message-row"]',
+    '[class*="product-card"]',
+    '[class*="goods-card"]'
+  ];
+
+  let messageItems = [];
+  for (const selector of messageSelectors) {
+    const items = document.querySelectorAll(selector);
+    if (items.length > 0) {
+      messageItems = Array.from(items);
+      break;
+    }
+  }
+
+  // Check last 10 messages for product cards
+  const recentItems = messageItems.slice(-10);
+  
+  for (const item of recentItems) {
+    const text = item.textContent || '';
+    
+    // Pattern 1: "商品ID: 633766363069" or "商品ID：633766363069"
+    const idMatch = text.match(/商品ID[：:]\s*(\d+)/);
+    if (idMatch && idMatch[1]) {
+      productIds.push(idMatch[1]);
+      console.log(`[PDD] Found product ID from card: ${idMatch[1]}`);
+    }
+    
+    // Pattern 2: PDD goods_id in URLs
+    const urlMatch = text.match(/goods_id[=:](\d+)/i);
+    if (urlMatch && urlMatch[1]) {
+      productIds.push(urlMatch[1]);
+      console.log(`[PDD] Found product ID from URL: ${urlMatch[1]}`);
+    }
+  }
+  
+  // Return unique IDs
+  return [...new Set(productIds)];
 }
 
 /**
@@ -1056,7 +1121,8 @@ async function processCurrentConversation() {
     const conversationContext = collectConversationContext();
     
     // Extract product names from order panel for product-specific KB matching
-    const orderInfo = extractOrderInfo();
+    // Click "个人订单" tab first to get buyer-specific orders
+    const orderInfo = await extractOrderInfo();
     const productNames = orderInfo.orders
       .flatMap(o => (o.products || []).map(p => p.name))
       .filter(Boolean);
@@ -1072,6 +1138,12 @@ async function processCurrentConversation() {
       console.log(`[PDD] Found ${buyerImages.length} buyer images: ${buyerImages.join(', ').substring(0, 100)}`);
     }
 
+    // Extract product card IDs from chat messages
+    const productCardIds = extractProductCardIds();
+    if (productCardIds.length > 0) {
+      console.log(`[PDD] Found product card IDs: ${productCardIds.join(', ')}`);
+    }
+
     // Send to main process with context
     ipcRenderer.send('platform:new-message', {
       platformId: PLATFORM_ID,
@@ -1080,6 +1152,7 @@ async function processCurrentConversation() {
       message: lastMsg.text,
       context: conversationContext,
       productNames: productNames,
+      productCardIds: productCardIds,  // Include product IDs from chat cards
       buyerImages: buyerImages,  // Include buyer-sent images for vision analysis
       timestamp: Date.now()
     });
@@ -1215,7 +1288,24 @@ function startMonitoring() {
     console.log('[PDD] Last message is from merchant on startup, skipping initial process');
   }
 
-  // 2. Aggressive startup scan: scan unread/timeout conversations immediately and again after delay
+  // 2. Click "Load More" button to load all conversations first
+  async function loadAllConversations() {
+    const loadMoreBtn = document.querySelector('.more-btn-box, [class*="more-btn"], [class*="load-more"]');
+    if (loadMoreBtn && loadMoreBtn.textContent.includes('加载更多')) {
+      console.log('[PDD] Found "加载更多会话" button, clicking to load more conversations...');
+      loadMoreBtn.click();
+      await new Promise(r => setTimeout(r, 1500));  // Wait for conversations to load
+      // Recursively load more if button still exists
+      await loadAllConversations();
+    }
+  }
+  
+  // Load all conversations before scanning
+  setTimeout(async () => {
+    await loadAllConversations();
+  }, 1500);
+
+  // 3. Aggressive startup scan: scan unread/timeout conversations immediately and again after delay
   // First scan at 2s (page may still be loading)
   setTimeout(() => {
     console.log('[PDD] Startup scan #1: scanning for timeout/unread conversations...');
@@ -1234,7 +1324,7 @@ function startMonitoring() {
     scanUnreadConversations();
   }, 15000);
 
-  // 3. Set up MutationObserver for new messages in chat area
+  // 4. Set up MutationObserver for new messages in chat area
   const chatArea = findElement([
     '[class*="chat-content"]',
     '[class*="message-list"]',
@@ -1261,7 +1351,7 @@ function startMonitoring() {
     subtree: true
   });
 
-  // 4. Periodic check for new messages - use Shift+Tab to switch (every 5 seconds, with cooldown)
+  // 5. Periodic check for new messages - use Shift+Tab to switch (every 5 seconds, with cooldown)
   state.scanInterval = setInterval(() => {
     if (!state.isProcessing) {
       const now = Date.now();
@@ -1294,7 +1384,7 @@ function startMonitoring() {
     }
   }, 5000);  // Changed from 3000 to 5000ms
 
-  // 5. Periodic check on current conversation (every 2 seconds)
+  // 6. Periodic check on current conversation (every 2 seconds)
   setInterval(() => {
     if (!state.isProcessing) {
       processCurrentConversation();
@@ -1307,45 +1397,168 @@ function startMonitoring() {
 // ============ OrderDetect: Order Info Extraction ============
 
 /**
- * Extract order information from the chat page DOM (right sidebar / order panel)
- * Returns structured order data including payment status, shipping, products, and chat images.
+ * Try to click "个人订单" (personal orders) tab to show buyer-specific orders.
+ * Returns an object with { success, debug } for diagnostics.
  */
-function extractOrderInfo() {
+async function clickPersonalOrderTab() {
+  const debug = { strategy: 'none', found: false, tag: null, class: null, text: null, xpathCount: 0 };
+  try {
+    // Strategy 1: Use XPath to find elements with exact text "个人订单"
+    const xpath = '//span[text()="个人订单"] | //div[text()="个人订单"] | //a[text()="个人订单"] | //p[text()="个人订单"] | //*[contains(text(),"个人订单")]';
+    const xpathResult = document.evaluate(xpath, document.body, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
+    debug.xpathCount = xpathResult.snapshotLength;
+    
+    for (let i = 0; i < xpathResult.snapshotLength; i++) {
+      const el = xpathResult.snapshotItem(i);
+      const directText = el.childNodes.length <= 3 ? (el.textContent || '').trim() : '';
+      if (directText.includes('个人订单') && directText.length < 20) {
+        const classList = el.classList ? el.classList.toString() : '';
+        debug.strategy = 'xpath';
+        debug.found = true;
+        debug.tag = el.tagName;
+        debug.class = classList.substring(0, 80);
+        debug.text = directText.substring(0, 30);
+        const isActive = classList.includes('active') || classList.includes('selected') || classList.includes('current');
+        if (!isActive) {
+          el.click();
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+        debug.alreadyActive = isActive;
+        debug._element = el;  // Keep reference for DOM navigation
+        return { success: true, debug };
+      }
+    }
+
+    // Strategy 2: Find tab-like containers with "个人订单" text
+    const allElements = document.querySelectorAll('[class*="tab"], [class*="Tab"], [role="tab"], [class*="menu"], [class*="nav"], [class*="order"] span, [class*="order"] div');
+    debug.strategy2Count = allElements.length;
+    for (const el of allElements) {
+      const text = (el.textContent || '').trim();
+      if (text.includes('个人订单') && text.length < 20) {
+        const classList = el.classList ? el.classList.toString() : '';
+        debug.strategy = 'css';
+        debug.found = true;
+        debug.tag = el.tagName;
+        debug.class = classList.substring(0, 80);
+        debug.text = text.substring(0, 30);
+        const isActive = classList.includes('active') || classList.includes('selected') || classList.includes('current');
+        if (!isActive) {
+          el.click();
+          await new Promise(resolve => setTimeout(resolve, 600));
+        }
+        debug.alreadyActive = isActive;
+        return { success: true, debug };
+      }
+    }
+
+    debug.strategy = 'not_found';
+    return { success: false, debug };
+  } catch (e) {
+    debug.error = e.message;
+    return { success: false, debug };
+  }
+}
+
+/**
+ * Extract order information from the chat page DOM (right sidebar / order panel)
+ * First clicks "个人订单" tab to get buyer-specific orders instead of shop-wide orders.
+ * IMPORTANT: Only extracts orders after confirming we're on "个人订单" tab.
+ * If tab switch fails, returns empty orders to avoid sending shop-wide order context to AI.
+ */
+async function extractOrderInfo() {
   const result = {
     orders: [],
-    chatImages: []
+    chatImages: [],
+    _tabDebug: null
   };
 
   try {
-    // --- 1. Locate order panel (right sidebar in PDD chat) ---
-    const orderPanel = findElement([
+    // --- 0. Click "个人订单" tab to show buyer-specific orders ---
+    const tabResult = await clickPersonalOrderTab();
+    result._tabDebug = tabResult.debug;
+
+    // CRITICAL: Only extract orders if we confirmed we're on buyer-specific tab
+    if (!tabResult.success) {
+      result.chatImages = extractChatImages();
+      return result;
+    }
+
+    // --- 1. Try to find the active tab content area ---
+    // Since the tab is LI.order-panel-second-bar, navigate to the content panel
+    // PDD likely has: tab bar (UL/container) + content panels below
+    let orderContentArea = null;
+    
+    // Strategy A: Find the "个人订单" tab's parent, then find the active content panel
+    const personalTab = tabResult.debug._element;
+    if (personalTab) {
+      // Look for content area: sibling of tab's parent container, or next sibling content
+      const tabParent = personalTab.parentElement;
+      if (tabParent) {
+        // Check siblings after the tab container for content panels
+        let sibling = tabParent.nextElementSibling;
+        while (sibling) {
+          if (isElementVisible(sibling) && sibling.offsetHeight > 20) {
+            orderContentArea = sibling;
+            break;
+          }
+          sibling = sibling.nextElementSibling;
+        }
+        // Also try: parent's parent, then find content area
+        if (!orderContentArea && tabParent.parentElement) {
+          const grandParent = tabParent.parentElement;
+          for (const child of grandParent.children) {
+            if (child !== tabParent && isElementVisible(child) && child.offsetHeight > 30) {
+              // This might be the content area
+              const text = child.textContent || '';
+              // Skip if it's a completely different section (chat, input, etc.)
+              if (!text.includes('发送') && !text.includes('输入') && child.children.length > 0) {
+                orderContentArea = child;
+                break;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Add content area debug info
+    result._panelDebug = {
+      foundContentArea: !!orderContentArea,
+      contentTag: orderContentArea?.tagName,
+      contentClass: orderContentArea?.classList?.toString()?.substring(0, 80),
+      contentText: orderContentArea?.textContent?.substring(0, 100),
+      contentChildCount: orderContentArea?.children?.length
+    };
+
+    // If we found the specific content area for "个人订单", extract from it
+    const searchRoot = orderContentArea || document;
+    
+    const orderPanelSelectors = [
       '[class*="order-card"]',
-      '[class*="order-info"]',
-      '[class*="order-panel"]',
+      '[class*="order-info"]:not([class*="order-info-tab"])',
       '[class*="order-detail"]',
       '[class*="trade-card"]',
-      '[class*="trade-info"]',
-      '[class*="aside"] [class*="order"]',
-      '[class*="right-panel"] [class*="order"]',
-      '[class*="sidebar"] [class*="order"]'
-    ]);
+      '[class*="trade-info"]'
+    ];
+    
+    let orderPanel = null;
+    for (const selector of orderPanelSelectors) {
+      try {
+        const els = searchRoot.querySelectorAll(selector);
+        for (const el of els) {
+          if (isElementVisible(el)) {
+            orderPanel = el;
+            break;
+          }
+        }
+        if (orderPanel) break;
+      } catch (e) {}
+    }
 
     if (orderPanel) {
       const order = extractSingleOrder(orderPanel);
       if (order) {
         result.orders.push(order);
-      }
-    } else {
-      // Fallback: scan for multiple order cards in sidebar area
-      const orderCards = findElements([
-        '[class*="order-card"]',
-        '[class*="order-item"]',
-        '[class*="trade-card"]',
-        '[class*="trade-item"]'
-      ]);
-      for (const card of orderCards.slice(0, 3)) {
-        const order = extractSingleOrder(card);
-        if (order) result.orders.push(order);
       }
     }
 
@@ -1510,11 +1723,11 @@ function extractChatImages() {
 }
 
 // Listen for order info extraction request from main process
-ipcRenderer.on('platform:get-order-info', (event, payload) => {
+ipcRenderer.on('platform:get-order-info', async (event, payload) => {
   const requestId = payload?.requestId || '';
   console.log('[PDD][OrderDetect] Received extraction request, requestId:', requestId);
   try {
-    const orderInfo = extractOrderInfo();
+    const orderInfo = await extractOrderInfo();
     console.log('[PDD][OrderDetect] Extracted:', JSON.stringify(orderInfo).substring(0, 200));
     ipcRenderer.send('platform:order-info-result', { requestId, data: orderInfo });
   } catch (e) {
@@ -1815,6 +2028,7 @@ function autoClosePopups() {
 
 /**
  * Auto-login with provided credentials
+ * Uses human-like typing simulation to avoid anti-bot detection
  */
 function performAutoLogin(username, password) {
   console.log('[PDD] Attempting auto-login with username:', username);
@@ -1829,6 +2043,58 @@ function performAutoLogin(username, password) {
   }
 
   const sleep = (ms) => new Promise(resolve => setTimeout(resolve, ms));
+  
+  // Random delay between characters (50-150ms) to simulate human typing
+  const randomDelay = () => Math.floor(Math.random() * 100) + 50;
+  
+  /**
+   * Simulate human typing - type each character one by one
+   */
+  const simulateHumanTyping = async (input, text) => {
+    // Focus on the input first
+    input.focus();
+    input.click();
+    await sleep(100);
+    
+    // Clear any existing value
+    input.value = '';
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    await sleep(50);
+    
+    // Type each character one by one
+    for (let i = 0; i < text.length; i++) {
+      const char = text[i];
+      
+      // Simulate keydown event
+      input.dispatchEvent(new KeyboardEvent('keydown', {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        bubbles: true,
+        cancelable: true
+      }));
+      
+      // Append the character to value
+      input.value += char;
+      
+      // Simulate input event (for React state updates)
+      input.dispatchEvent(new Event('input', { bubbles: true }));
+      
+      // Simulate keyup event
+      input.dispatchEvent(new KeyboardEvent('keyup', {
+        key: char,
+        code: `Key${char.toUpperCase()}`,
+        bubbles: true,
+        cancelable: true
+      }));
+      
+      // Random delay between characters
+      await sleep(randomDelay());
+    }
+    
+    // Final change event
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    input.dispatchEvent(new Event('blur', { bubbles: true }));
+  };
 
   // Step 1: Click "账号登录" tab to switch from QR code login
   const switchToAccountLogin = () => {
@@ -1872,8 +2138,8 @@ function performAutoLogin(username, password) {
     return false;
   };
 
-  // Step 2: Fill in username and password
-  const fillCredentials = () => {
+  // Step 2: Fill in username and password with human-like typing
+  const fillCredentials = async () => {
     console.log('[PDD] Looking for login inputs...');
     
     // Find all inputs
@@ -1899,20 +2165,26 @@ function performAutoLogin(username, password) {
     }
     
     if (usernameInput && passwordInput) {
-      console.log('[PDD] Found both inputs, filling credentials...');
+      console.log('[PDD] Found both inputs, filling credentials with human-like typing...');
       
-      // Fill username using native input setter to trigger React state
-      const nativeInputValueSetter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'value').set;
+      // Type username character by character
+      console.log('[PDD] Typing username...');
+      await simulateHumanTyping(usernameInput, username);
       
-      nativeInputValueSetter.call(usernameInput, username);
-      usernameInput.dispatchEvent(new Event('input', { bubbles: true }));
-      usernameInput.dispatchEvent(new Event('change', { bubbles: true }));
+      // Wait a moment like a human would
+      await sleep(300 + Math.random() * 200);
       
-      nativeInputValueSetter.call(passwordInput, password);
-      passwordInput.dispatchEvent(new Event('input', { bubbles: true }));
-      passwordInput.dispatchEvent(new Event('change', { bubbles: true }));
+      // Click on password field (simulate human clicking)
+      console.log('[PDD] Clicking password field...');
+      passwordInput.click();
+      passwordInput.focus();
+      await sleep(200 + Math.random() * 100);
       
-      console.log('[PDD] Credentials filled');
+      // Type password character by character
+      console.log('[PDD] Typing password...');
+      await simulateHumanTyping(passwordInput, password);
+      
+      console.log('[PDD] Credentials filled with human-like typing');
       return true;
     }
     
@@ -1966,16 +2238,16 @@ function performAutoLogin(username, password) {
     // Wait for tab switch
     await sleep(2000);
     
-    // Fill credentials
-    let filled = fillCredentials();
+    // Fill credentials (async with human-like typing)
+    let filled = await fillCredentials();
     if (!filled) {
       await sleep(1500);
-      filled = fillCredentials();
+      filled = await fillCredentials();
     }
     
     if (filled) {
       // Wait a bit then click login
-      await sleep(1000);
+      await sleep(500 + Math.random() * 500);
       clickLoginButton();
     }
   };

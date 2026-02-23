@@ -12,10 +12,10 @@ class ChatSessionAdmin(admin.ModelAdmin):
 
 @admin.register(Message)
 class MessageAdmin(admin.ModelAdmin):
-    list_display = ['content_short', 'session', 'sender_type', 'created_at']
+    list_display = ['content_short', 'session', 'sender_type', 'timestamp']
     list_filter = ['sender_type']
     search_fields = ['content']
-    readonly_fields = ['created_at']
+    readonly_fields = ['timestamp']
     
     def content_short(self, obj):
         return obj.content[:50] + '...' if len(obj.content) > 50 else obj.content

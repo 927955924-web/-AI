@@ -420,3 +420,91 @@ class ScenarioRule(models.Model):
     
     def __str__(self):
         return f"[{self.get_scenario_type_display()}] {self.name}"
+
+
+class TokenUsage(models.Model):
+    """
+    Record token usage for each LLM API call.
+    Used for cost tracking and usage statistics.
+    """
+    
+    REQUEST_TYPE_CHOICES = [
+        ('chat', '对话回复'),
+        ('vision', '图像识别'),
+        ('qa_generation', 'QA生成'),
+    ]
+    
+    MODEL_NAME_CHOICES = [
+        ('deepseek', 'DeepSeek'),
+        ('qwen', '通义千问'),
+        ('doubao', '豆包'),
+        ('openai', 'OpenAI'),
+        ('gemini', 'Gemini'),
+    ]
+    
+    # Token counts
+    prompt_tokens = models.IntegerField(default=0, verbose_name='输入Token数')
+    completion_tokens = models.IntegerField(default=0, verbose_name='输出Token数')
+    total_tokens = models.IntegerField(default=0, verbose_name='总Token数')
+    
+    # Model info
+    model_name = models.CharField(
+        max_length=50,
+        choices=MODEL_NAME_CHOICES,
+        default='deepseek',
+        db_index=True,
+        verbose_name='模型平台'
+    )
+    model_version = models.CharField(max_length=100, blank=True, default='', verbose_name='模型版本')
+    
+    # Request type
+    request_type = models.CharField(
+        max_length=20,
+        choices=REQUEST_TYPE_CHOICES,
+        default='chat',
+        db_index=True,
+        verbose_name='请求类型'
+    )
+    
+    # Cost estimate (in CNY)
+    cost_estimate = models.DecimalField(
+        max_digits=10,
+        decimal_places=6,
+        default=0,
+        verbose_name='预估成本(元)'
+    )
+    
+    # Relations
+    shop = models.ForeignKey(
+        'shops.Shop',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='token_usages',
+        db_index=True,
+        verbose_name='所属店铺'
+    )
+    conversation_record = models.ForeignKey(
+        'ConversationRecord',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='token_usages',
+        verbose_name='关联对话记录'
+    )
+    
+    # Timestamp
+    created_at = models.DateTimeField(auto_now_add=True, db_index=True, verbose_name='创建时间')
+    
+    class Meta:
+        db_table = 'ai_token_usage'
+        verbose_name = 'Token使用记录'
+        verbose_name_plural = 'Token使用记录'
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['shop', 'model_name', 'created_at']),
+            models.Index(fields=['model_name', 'created_at']),
+        ]
+    
+    def __str__(self):
+        return f"[{self.model_name}] {self.total_tokens} tokens @ {self.created_at.strftime('%Y-%m-%d %H:%M')}"
