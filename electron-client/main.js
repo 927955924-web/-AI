@@ -123,6 +123,8 @@ const LEARNING_PLATFORMS = {
 // Global references
 let mainWindow = null;
 let platformViews = {};
+let activeShopId = null;  // Currently displayed shop ID, prevents race conditions
+let viewSuppressed = false;  // When true, prevents async callbacks from re-showing BrowserView
 let learningViews = {};  // Separate views for learning mode
 let learningState = {};  // Track learning state per platform: { platformId: { isExtracting, pendingProducts, currentIndex, listPageUrl } }
 let apiService = null;
@@ -161,7 +163,7 @@ function createMainWindow() {
     height: 900,
     minWidth: 1200,
     minHeight: 700,
-    title: '电商客服助手',
+    title: 'AI客服测试',
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -172,8 +174,8 @@ function createMainWindow() {
   // Load control panel
   mainWindow.loadFile(path.join(__dirname, 'renderer', 'index.html'));
 
-  // Open DevTools (detached window)
-  mainWindow.webContents.openDevTools({ mode: 'detach' });
+  // DevTools: 不自动打开，按 F12 手动打开
+  // mainWindow.webContents.openDevTools({ mode: 'detach' });
   
   // F12 to toggle DevTools
   mainWindow.webContents.on('before-input-event', (event, input) => {
@@ -198,14 +200,15 @@ function createMainWindow() {
     const currentViews = mainWindow.getBrowserViews();
     if (currentViews.length > 0) {
       const contentBounds = mainWindow.getContentBounds();
-      // Detect if the current view is a learning view; if so, use wider offset
-      const isLearning = Object.values(learningViews).includes(currentViews[0]);
-      const x = isLearning ? 440 : 200;
-      currentViews[0].setBounds({
-        x: x,
-        y: 44,
-        width: contentBounds.width - x - 180,
-        height: contentBounds.height - 44
+      currentViews.forEach(v => {
+        const isLearning = Object.values(learningViews).includes(v);
+        const x = isLearning ? 440 : 200;
+        v.setBounds({
+          x: x,
+          y: 44,
+          width: contentBounds.width - x - 180,
+          height: contentBounds.height - 44
+        });
       });
     }
   });
@@ -319,18 +322,19 @@ function clearDebugState() {
 }
 
 /**
- * Create a BrowserView for a platform
+ * Create a BrowserView for a shop (each shop has its own session/cookies)
  */
-function createPlatformView(platformId) {
+function createPlatformView(platformId, shopId) {
   const platform = PLATFORMS[platformId];
-  if (!platform) return null;
+  if (!platform || !shopId) return null;
 
   const view = new BrowserView({
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
       preload: path.join(__dirname, 'preload', platform.preload),
-      partition: `persist:${platformId}`
+      // Use shop-specific partition so each shop has separate cookies/session
+      partition: `persist:shop_${shopId}`
     }
   });
 
@@ -343,23 +347,42 @@ function createPlatformView(platformId) {
     return { action: 'deny' };
   });
 
-  platformViews[platformId] = view;
+  // Store by shopId instead of platformId (each shop has its own view)
+  platformViews[shopId] = view;
+  
+  // Send shopId to preload script after page loads so it knows which shop it belongs to
+  view.webContents.on('did-finish-load', () => {
+    view.webContents.send('shop:set-context', { shopId, platformId });
+  });
+  
   return view;
 }
 
 /**
  * Show a platform view in the main window
  */
-function showPlatformView(platformId) {
-  // Remove current view
+function showPlatformView(platformId, shopId) {
+  // Block if UI has suppressed views (modal/overlay is open)
+  if (viewSuppressed) {
+    console.log(`[View] showPlatformView blocked: viewSuppressed=true (shop: ${shopId})`);
+    return;
+  }
+
+  // Update active shop ID for race condition protection
+  activeShopId = shopId;
+
+  // Remove all current views
   const currentViews = mainWindow.getBrowserViews();
   currentViews.forEach(v => mainWindow.removeBrowserView(v));
 
-  // Get or create view
-  let view = platformViews[platformId];
+  // Get or create view (keyed by shopId for separate sessions)
+  let view = platformViews[shopId];
   if (!view) {
-    view = createPlatformView(platformId);
+    view = createPlatformView(platformId, shopId);
   }
+
+  // Race condition guard: if activeShopId changed during creation, abort
+  if (activeShopId !== shopId) return;
 
   if (view) {
     mainWindow.addBrowserView(view);
@@ -371,7 +394,7 @@ function showPlatformView(platformId) {
       width: contentBounds.width - 200 - 180,
       height: contentBounds.height - 44
     });
-    view.setAutoResize({ width: false, height: false });
+    view.setAutoResize({ width: true, height: true });
   }
 }
 
@@ -379,6 +402,8 @@ function showPlatformView(platformId) {
  * Hide all platform views
  */
 function hidePlatformViews() {
+  activeShopId = null;
+  viewSuppressed = true;  // Block async callbacks from re-showing views
   const currentViews = mainWindow.getBrowserViews();
   currentViews.forEach(v => mainWindow.removeBrowserView(v));
 }
@@ -400,7 +425,10 @@ ipcMain.on('platform:log', (event, data) => {
 
 // Send native Enter key to platform view (trusted event)
 ipcMain.on('platform:send-enter', (event, platformId) => {
-  const view = platformViews[platformId];
+  // Get current shop to find the correct view (views are now keyed by shopId)
+  const currentShop = store.get('currentShop');
+  const shopId = currentShop?.shopId;
+  const view = shopId ? platformViews[shopId] : null;
   if (view && !view.webContents.isDestroyed()) {
     view.webContents.sendInputEvent({ type: 'keyDown', keyCode: 'Return' });
     setTimeout(() => {
@@ -412,7 +440,10 @@ ipcMain.on('platform:send-enter', (event, platformId) => {
 
 // Send Shift+Tab to switch to next pending conversation (PDD feature)
 ipcMain.on('platform:send-shift-tab', (event, platformId) => {
-  const view = platformViews[platformId];
+  // Get current shop to find the correct view (views are now keyed by shopId)
+  const currentShop = store.get('currentShop');
+  const shopId = currentShop?.shopId;
+  const view = shopId ? platformViews[shopId] : null;
   if (view && !view.webContents.isDestroyed()) {
     // Press Shift+Tab
     view.webContents.sendInputEvent({ 
@@ -471,17 +502,26 @@ ipcMain.handle('platforms:list', () => {
 
 // Open platform
 ipcMain.handle('platform:open', (event, platformId) => {
-  showPlatformView(platformId);
+  // Get current shop to find shopId (views are now keyed by shopId)
+  const currentShop = store.get('currentShop');
+  const shopId = currentShop?.shopId;
+  if (shopId) {
+    viewSuppressed = false;  // Explicit user action clears suppression
+    showPlatformView(platformId, shopId);
+  }
   return true;
 });
 
 // Close platform view
 ipcMain.handle('platform:close', (event, platformId) => {
-  const view = platformViews[platformId];
+  // Get current shop to find shopId (views are now keyed by shopId)
+  const currentShop = store.get('currentShop');
+  const shopId = currentShop?.shopId;
+  const view = shopId ? platformViews[shopId] : null;
   if (view) {
     mainWindow.removeBrowserView(view);
     view.webContents.close();
-    delete platformViews[platformId];
+    delete platformViews[shopId];
   }
   return true;
 });
@@ -546,29 +586,33 @@ ipcMain.handle('shops:start', async (event, shopId) => {
     if (currentShop && currentShop.shopId === shopId) {
       const platformId = currentShop.platformId;
       
-      // Show platform view if not already visible
+      // Show platform view only if no view is currently showing (avoid double-call with selectShop)
       if (!currentShop.isNative) {
-        showPlatformView(platformId);
+        const currentViews = mainWindow.getBrowserViews();
+        if (currentViews.length === 0) {
+          showPlatformView(platformId, shopId);
+        }
       }
       
-      const view = platformViews[platformId];
+      // Views are now keyed by shopId
+      const view = platformViews[shopId];
       const username = currentShop.username || '';
       const password = currentShop.password || '';
       
       if (view && username && password && !view.webContents.isDestroyed()) {
-        // Cancel any previously pending auto-login timer
-        if (autoLoginTimers[platformId]) {
-          clearTimeout(autoLoginTimers[platformId]);
-          autoLoginTimers[platformId] = null;
+        // Cancel any previously pending auto-login timer (keyed by shopId)
+        if (autoLoginTimers[shopId]) {
+          clearTimeout(autoLoginTimers[shopId]);
+          autoLoginTimers[shopId] = null;
         }
-        autoLoginTimers[platformId] = setTimeout(() => {
-          autoLoginTimers[platformId] = null;
+        autoLoginTimers[shopId] = setTimeout(() => {
+          autoLoginTimers[shopId] = null;
           if (view && !view.webContents.isDestroyed()) {
             view.webContents.send('shop:auto-login', {
               username: username,
               password: password
             });
-            console.log(`[Shop] Sent auto-login credentials to ${platformId} on start`);
+            console.log(`[Shop] Sent auto-login credentials to ${platformId} (shop: ${shopId}) on start`);
           }
         }, 3000);
       }
@@ -593,11 +637,11 @@ ipcMain.handle('shops:stop', async (event, shopId) => {
     const currentShop = store.get('currentShop');
     const platformId = currentShop && currentShop.shopId === shopId ? currentShop.platformId : null;
     if (platformId) {
-      // Cancel any pending auto-login timer for this platform
-      if (autoLoginTimers[platformId]) {
-        clearTimeout(autoLoginTimers[platformId]);
-        autoLoginTimers[platformId] = null;
-        console.log(`[Shop] Cancelled pending auto-login timer for ${platformId}`);
+      // Cancel any pending auto-login timer for this shop
+      if (autoLoginTimers[shopId]) {
+        clearTimeout(autoLoginTimers[shopId]);
+        autoLoginTimers[shopId] = null;
+        console.log(`[Shop] Cancelled pending auto-login timer for shop ${shopId}`);
       }
       await cleanupShopTasks(shopId, platformId);
     }
@@ -610,24 +654,25 @@ ipcMain.handle('shops:stop', async (event, shopId) => {
 // Logout shop - clear session/cookies and close BrowserView
 ipcMain.handle('shops:logout', async (event, platformId) => {
   try {
-    console.log(`[Shop] Logging out platform: ${platformId}`);
-    
-    // Cancel any pending auto-login timer for this platform
-    if (autoLoginTimers[platformId]) {
-      clearTimeout(autoLoginTimers[platformId]);
-      autoLoginTimers[platformId] = null;
-      console.log(`[Shop] Cancelled pending auto-login timer for ${platformId}`);
-    }
-    
-    // Clean up tasks for this shop only
+    // Get current shop to find shopId
     const currentShop = store.get('currentShop');
     const shopId = currentShop && currentShop.platformId === platformId ? currentShop.shopId : null;
+    console.log(`[Shop] Logging out shop: ${shopId} (platform: ${platformId})`);
+    
+    // Cancel any pending auto-login timer for this shop
+    if (shopId && autoLoginTimers[shopId]) {
+      clearTimeout(autoLoginTimers[shopId]);
+      autoLoginTimers[shopId] = null;
+      console.log(`[Shop] Cancelled pending auto-login timer for shop ${shopId}`);
+    }
+    
+    // Clean up tasks for this shop
     if (shopId) {
       await cleanupShopTasks(shopId, platformId);
     }
     
-    // Clear session data for this platform
-    const partitionName = `persist:${platformId}`;
+    // Clear session data for this shop (now using shop-specific partition)
+    const partitionName = shopId ? `persist:shop_${shopId}` : `persist:${platformId}`;
     const platformSession = session.fromPartition(partitionName);
     
     // Clear all storage data (cookies, localStorage, etc.)
@@ -635,22 +680,22 @@ ipcMain.handle('shops:logout', async (event, platformId) => {
       storages: ['cookies', 'localstorage', 'sessionstorage', 'cachestorage']
     });
     
-    // Close and remove the BrowserView
-    if (platformViews[platformId]) {
-      const view = platformViews[platformId];
+    // Close and remove the BrowserView (now keyed by shopId)
+    if (shopId && platformViews[shopId]) {
+      const view = platformViews[shopId];
       if (mainWindow && !mainWindow.isDestroyed()) {
         mainWindow.removeBrowserView(view);
       }
       if (!view.webContents.isDestroyed()) {
         view.webContents.destroy();
       }
-      delete platformViews[platformId];
+      delete platformViews[shopId];
     }
     
     // Clear current shop from store
     store.set('currentShop', null);
     
-    console.log(`[Shop] Platform ${platformId} logged out and session cleared`);
+    console.log(`[Shop] Shop ${shopId} (platform: ${platformId}) logged out and session cleared`);
     return { success: true };
   } catch (error) {
     console.error(`[Shop] Logout error:`, error);
@@ -776,12 +821,11 @@ ipcMain.handle('shops:select', async (event, shop) => {
           // Don't fail - user can manually start WeChat later
         }
       }
-    } else {
-      // Standard BrowserView platform
-      // Always show the platform view (create if needed)
-      showPlatformView(electronPlatform);
     }
 
+    // IMPORTANT: Update currentShop BEFORE showing BrowserView to avoid race condition
+    // where preload script requests credentials before currentShop is updated
+    
     // Get credentials from local store
     const credentials = store.get('shopCredentials') || {};
     const shopCreds = credentials[shop.shop_id] || {};
@@ -803,11 +847,13 @@ ipcMain.handle('shops:select', async (event, shop) => {
       config_json: Object.keys(localConfig).length > 0 ? localConfig : (shop.config_json || {})
     });
 
-    // Send credentials to preload for auto-login ONLY when shop is started (not on select)
-    // Auto-login is now triggered by shops:start handler
-    // (credentials are stored in currentShop for later use)
-
     console.log(`[Shop] Selected shop: ${shop.shop_name} (${electronPlatform}${platformConfig.native ? ' - native' : ''})`);
+
+    // Now show the platform view AFTER currentShop is updated
+    if (!platformConfig.native) {
+      viewSuppressed = false;  // Clear suppression - this is an explicit user action
+      showPlatformView(electronPlatform, shop.shop_id);
+    }
 
     // Switch MQTT subscription to new shop's knowledge sync topic
     if (mqttClient && mqttClient.connected) {
@@ -828,6 +874,16 @@ ipcMain.handle('shops:select', async (event, shop) => {
 // Hide BrowserView (used when showing forms or switching tabs)
 ipcMain.handle('shops:hide', async () => {
   hidePlatformViews();
+  return { success: true };
+});
+
+// Show BrowserView (restore after modal close)
+ipcMain.handle('shops:show', async () => {
+  const currentShop = store.get('currentShop');
+  if (currentShop && currentShop.shopId) {
+    viewSuppressed = false;  // Clear suppression - explicit restore
+    showPlatformView(currentShop.platformId, currentShop.shopId);
+  }
   return { success: true };
 });
 
@@ -870,7 +926,10 @@ ipcMain.handle('shop:request-auto-login', async (event, platformId) => {
 // Simulate typing a character (for auto-login)
 ipcMain.handle('input:type-char', async (event, platformId, char) => {
   try {
-    const view = platformViews[platformId];
+    // Get current shop to find the correct view (views are now keyed by shopId)
+    const currentShop = store.get('currentShop');
+    const shopId = currentShop?.shopId;
+    const view = shopId ? platformViews[shopId] : null;
     if (view && !view.webContents.isDestroyed()) {
       view.webContents.sendInputEvent({
         type: 'char',
@@ -887,7 +946,10 @@ ipcMain.handle('input:type-char', async (event, platformId, char) => {
 // Simulate pressing Enter key
 ipcMain.handle('input:press-enter', async (event, platformId) => {
   try {
-    const view = platformViews[platformId];
+    // Get current shop to find the correct view (views are now keyed by shopId)
+    const currentShop = store.get('currentShop');
+    const shopId = currentShop?.shopId;
+    const view = shopId ? platformViews[shopId] : null;
     if (view && !view.webContents.isDestroyed()) {
       view.webContents.sendInputEvent({
         type: 'keyDown',
@@ -908,7 +970,10 @@ ipcMain.handle('input:press-enter', async (event, platformId) => {
 // Simulate mouse click at specific coordinates
 ipcMain.handle('input:mouse-click', async (event, platformId, x, y) => {
   try {
-    const view = platformViews[platformId];
+    // Get current shop to find the correct view (views are now keyed by shopId)
+    const currentShop = store.get('currentShop');
+    const shopId = currentShop?.shopId;
+    const view = shopId ? platformViews[shopId] : null;
     if (view && !view.webContents.isDestroyed()) {
       // Move mouse to position
       view.webContents.sendInputEvent({
@@ -965,13 +1030,35 @@ ipcMain.handle('auth:login', async (event, username, password) => {
   }
 });
 
+// Register new user
+ipcMain.handle('auth:register', async (event, data) => {
+  try {
+    const serverUrl = store.get('serverUrl');
+    apiService = new ApiService(serverUrl);
+    apiService.onTokenRefreshed((newTokens) => {
+      store.set('tokens', newTokens);
+    });
+    const result = await apiService.register(data);
+    if (result.success) {
+      store.set('tokens', result.data.tokens);
+      apiService.setTokens(result.data.tokens);
+    }
+    return result;
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // Handle platform login success from preload scripts
 ipcMain.on('platform:login-success', (event, data) => {
-  const { platformId } = data;
-  console.log(`[Shop] Platform login success detected: ${platformId}`);
-  // Forward to renderer to update shop status display
+  const { platformId, shopId: preloadShopId } = data;
+  // Prefer shopId from preload (set when BrowserView was created), fallback to currentShop
+  const currentShop = store.get('currentShop');
+  const shopId = preloadShopId || currentShop?.shopId;
+  console.log(`[Shop] Login success detected: platform=${platformId}, shop=${shopId} (from preload: ${!!preloadShopId})`);
+  // Forward to renderer to update specific shop status
   if (mainWindow && !mainWindow.isDestroyed()) {
-    mainWindow.webContents.send('shop:login-success', { platformId });
+    mainWindow.webContents.send('shop:login-success', { platformId, shopId });
   }
 });
 
@@ -1154,6 +1241,17 @@ ipcMain.handle('scenario-rules:delete', async (event, ruleId) => {
   }
 });
 
+// ============ Daily Stats IPC ============
+
+ipcMain.handle('stats:daily', async () => {
+  try {
+    if (!apiService) return { success: false, error: 'API service not initialized' };
+    return await apiService.getDailyStats();
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
 // ============ API Settings IPC ============
 
 ipcMain.handle('api:getSettings', async () => {
@@ -1237,6 +1335,17 @@ ipcMain.on('platform:new-message', async (event, data) => {
   const { platformId, customerId, customerName, message, context, timestamp, buyerImages, buyerVideoFrames } = data;
   
   console.log(`[${platformId}] New message from ${customerName}: ${message}`);
+  
+  // Log buyer media for debugging vision analysis
+  if (buyerImages && buyerImages.length > 0) {
+    console.log(`[${platformId}][Vision] Received ${buyerImages.length} buyer images:`);
+    buyerImages.forEach((url, i) => console.log(`  [${i+1}] ${url.substring(0, 100)}...`));
+  } else {
+    console.log(`[${platformId}][Vision] No buyer images in this message`);
+  }
+  if (buyerVideoFrames && buyerVideoFrames.length > 0) {
+    console.log(`[${platformId}][Vision] Received ${buyerVideoFrames.length} video frames`);
+  }
   
   // Check if this customer is already being processed
   if (processingCustomers.has(customerId)) {
@@ -1614,6 +1723,47 @@ ipcMain.on('debug:add-knowledge', async (event, data) => {
   }
 });
 
+// Correct knowledge base entry (update existing or create new, mark as correct)
+ipcMain.on('debug:correct-knowledge', async (event, data) => {
+  const { requestId, shop_id, question, correct_answer, kb_id } = data;
+  try {
+    if (!apiService) {
+      event.reply('debug:correct-knowledge-result', { requestId, success: false, error: 'API service not initialized' });
+      return;
+    }
+
+    let result;
+    if (kb_id) {
+      // Update existing entry with correct answer
+      result = await apiService.updateKnowledge(kb_id, { answer: correct_answer });
+      if (result.success) {
+        await apiService.markKnowledgeCorrect(kb_id);
+        console.log(`[Debug] Corrected KB entry #${kb_id}`);
+      }
+    } else {
+      // Create new entry marked as correct
+      result = await apiService.createKnowledge({
+        shop_id,
+        question,
+        answer: correct_answer,
+        is_correct: true,
+        category: 'error_correction'
+      });
+      if (result.success) {
+        console.log(`[Debug] Created corrected KB entry #${result.data?.id}`);
+      }
+    }
+
+    if (result.success) {
+      event.reply('debug:correct-knowledge-result', { requestId, success: true, data: result.data });
+    } else {
+      event.reply('debug:correct-knowledge-result', { requestId, success: false, error: result.error });
+    }
+  } catch (error) {
+    event.reply('debug:correct-knowledge-result', { requestId, success: false, error: error.message });
+  }
+});
+
 // ============ Learning Mode IPC Handlers ============
 
 /**
@@ -1981,6 +2131,11 @@ ipcMain.handle('learning:status', async (event, taskId) => {
   return await apiService.getLearningTaskStatus(taskId);
 });
 
+// Resolve learning conflict
+ipcMain.handle('learning:resolve-conflict', async (event, conflictId, action, newAnswer) => {
+  return await apiService.resolveConflict(conflictId, action, newAnswer);
+});
+
 // Close learning view and return to normal view
 ipcMain.handle('learning:close', async (event, platformId) => {
   const view = learningViews[platformId];
@@ -2005,8 +2160,13 @@ ipcMain.handle('learning:close', async (event, platformId) => {
     preLearningWindowState = null;  // Clear saved state
   }
   
-  // Show normal platform view
-  showPlatformView(platformId);
+  // Show normal platform view (get shopId from currentShop)
+  const currentShop = store.get('currentShop');
+  const shopId = currentShop?.shopId;
+  if (shopId) {
+    viewSuppressed = false;  // Learning ended, allow view to show
+    showPlatformView(platformId, shopId);
+  }
   
   return { success: true };
 });
@@ -2879,7 +3039,8 @@ async function checkCurrentShopPending() {
   const currentShop = store.get('currentShop');
   if (!currentShop) return false;
   
-  const view = platformViews[currentShop.platformId];
+  // Views are now keyed by shopId
+  const view = platformViews[currentShop.shopId];
   if (!view || view.webContents.isDestroyed()) return false;
   
   return new Promise((resolve) => {
@@ -2947,9 +3108,7 @@ async function switchToNextRunningShop() {
     return false;
   }
   
-  showPlatformView(electronPlatform);
-  
-  // Update current shop context
+  // Update current shop context BEFORE showing view (to avoid race condition)
   const credentials = store.get('shopCredentials') || {};
   const shopCreds = credentials[nextShop.shop_id] || {};
   const shopConfigs = store.get('shopConfigs') || {};
@@ -2964,6 +3123,9 @@ async function switchToNextRunningShop() {
     password: shopCreds.password || '',
     config_json: Object.keys(localConfig).length > 0 ? localConfig : (nextShop.config_json || {})
   });
+  
+  // Now show the platform view AFTER currentShop is updated
+  showPlatformView(electronPlatform, nextShop.shop_id);
   
   // Notify renderer
   if (mainWindow) {
@@ -2980,7 +3142,8 @@ function refreshCurrentShopPage() {
   const currentShop = store.get('currentShop');
   if (!currentShop) return;
   
-  const view = platformViews[currentShop.platformId];
+  // Views are now keyed by shopId
+  const view = platformViews[currentShop.shopId];
   if (view && !view.webContents.isDestroyed()) {
     const now = Date.now();
     const lastRefresh = lastShopRefreshTime[currentShop.shopId] || 0;

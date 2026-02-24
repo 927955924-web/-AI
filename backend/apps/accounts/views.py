@@ -202,6 +202,7 @@ class ApiSettingsView(APIView):
         'llm_provider', 'llm_model', 'llm_temperature', 'llm_base_url',
         'deepseek_api_key', 'qwen_api_key', 'doubao_api_key',
         'openai_api_key', 'gemini_api_key', 'kb_similarity_threshold',
+        'max_reply_length', 'context_messages',
     ]
 
     SECRET_KEYS = {
@@ -221,6 +222,8 @@ class ApiSettingsView(APIView):
         'openai_api_key': 'OPENAI_API_KEY',
         'gemini_api_key': 'GEMINI_API_KEY',
         'kb_similarity_threshold': 'KB_SIMILARITY_THRESHOLD',
+        'max_reply_length': 'MAX_REPLY_LENGTH',
+        'context_messages': 'CONTEXT_MESSAGES',
     }
 
     def get(self, request):
@@ -253,6 +256,8 @@ class ApiSettingsView(APIView):
     def put(self, request):
         data = request.data
         updated = []
+        api_key_changed = False
+        
         for key in self.SETTING_KEYS:
             if key not in data:
                 continue
@@ -266,9 +271,17 @@ class ApiSettingsView(APIView):
                 defaults={'value': value, 'is_secret': is_secret},
             )
             updated.append(key)
+            
+            # Track if any API key was changed
+            if key in self.SECRET_KEYS:
+                api_key_changed = True
 
         # Also update backend .env file for the running process
         self._sync_to_env(data)
+        
+        # If API keys changed, clear model health cache so new keys take effect immediately
+        if api_key_changed:
+            self._clear_model_health_cache()
 
         return Response({
             'success': True,
@@ -286,3 +299,28 @@ class ApiSettingsView(APIView):
                     continue
                 if value:
                     os.environ[env_key] = value
+
+    def _clear_model_health_cache(self):
+        """Clear model health check cache so new API keys take effect immediately."""
+        from django.core.cache import cache
+        import logging
+        logger = logging.getLogger(__name__)
+        
+        # Model health cache prefix (must match the one in services.py)
+        MODEL_HEALTH_CACHE_PREFIX = 'model_health:'
+        
+        # List of models to clear cache for
+        models = [
+            'deepseek-v3.2', 'qwen-turbo', 'qwen-plus', 'qwen-max', 'qwen-3-plus',
+            'doubao-pro', 'doubao-lite', 'gpt-4o', 'gpt-4o-mini',
+            'gemini-3.0-pro', 'gemini-2.0-flash', 'qwen-vl-plus', 'qwen-vl-max',
+            'doubao-vision-pro', 'doubao-vision-lite', 'gemini-pro-vision',
+        ]
+        
+        cleared = 0
+        for model in models:
+            cache_key = f"{MODEL_HEALTH_CACHE_PREFIX}{model}"
+            if cache.delete(cache_key):
+                cleared += 1
+        
+        logger.info(f"[Settings] Cleared {cleared} model health cache entries after API key change")

@@ -1,6 +1,6 @@
 {
   "name": "ecommerce-cs-client",
-  "version": "1.0.0",
+  "version": "1.2.4",
   "description": "E-commerce Customer Service Automation Client",
   "main": "main.js",
   "scripts": {
@@ -25,7 +25,7 @@
   },
   "build": {
     "appId": "com.ecommerce.cs-client",
-    "productName": "电商客服助手",
+    "productName": "AI客服测试",
     "directories": {
       "output": "dist"
     },

@@ -10,15 +10,16 @@ class KnowledgeSerializer(serializers.ModelSerializer):
     
     shop_name = serializers.CharField(source='shop.shop_name', read_only=True)
     product_name = serializers.CharField(source='product.name', read_only=True, default='')
+    source_display = serializers.CharField(source='get_source_display', read_only=True)
     
     class Meta:
         model = KnowledgeBase
         fields = [
             'id', 'question', 'answer', 'is_correct', 'shop', 'shop_name',
-            'product', 'product_name',
+            'product', 'product_name', 'source', 'source_display',
             'category', 'keywords', 'usage_count', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'usage_count', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'source', 'usage_count', 'created_at', 'updated_at']
 
 
 class KnowledgeCreateSerializer(serializers.ModelSerializer):

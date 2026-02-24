@@ -37,6 +37,48 @@
           </div>
         </el-col>
       </el-row>
+      
+      <!-- Per-model breakdown table -->
+      <el-table
+        :data="modelTableData"
+        stripe
+        class="model-table"
+        :default-sort="{ prop: 'cost_estimate', order: 'descending' }"
+        show-summary
+        :summary-method="getModelSummaries"
+      >
+        <el-table-column label="模型" prop="display_name" min-width="120">
+          <template #default="{ row }">
+            <span class="model-dot" :style="{ background: row.color }"></span>
+            {{ row.display_name }}
+          </template>
+        </el-table-column>
+        <el-table-column label="输入Token" prop="prompt_tokens" sortable align="right" width="120">
+          <template #default="{ row }">{{ formatTokens(row.prompt_tokens) }}</template>
+        </el-table-column>
+        <el-table-column label="输出Token" prop="completion_tokens" sortable align="right" width="120">
+          <template #default="{ row }">{{ formatTokens(row.completion_tokens) }}</template>
+        </el-table-column>
+        <el-table-column label="总Token" prop="total_tokens" sortable align="right" width="120">
+          <template #default="{ row }">{{ formatTokens(row.total_tokens) }}</template>
+        </el-table-column>
+        <el-table-column label="预估成本" prop="cost_estimate" sortable align="right" width="120">
+          <template #default="{ row }">
+            <span class="cost-value">¥{{ row.cost_estimate.toFixed(4) }}</span>
+          </template>
+        </el-table-column>
+        <el-table-column label="调用次数" prop="request_count" sortable align="right" width="100" />
+        <el-table-column label="占比" prop="percentage" sortable align="center" width="160">
+          <template #default="{ row }">
+            <el-progress
+              :percentage="row.percentage"
+              :stroke-width="14"
+              :color="row.color"
+              :format="() => row.percentage.toFixed(1) + '%'"
+            />
+          </template>
+        </el-table-column>
+      </el-table>
     </el-card>
     
     <!-- Token Charts -->
@@ -111,7 +153,7 @@
       </el-col>
       <el-col :span="12">
         <el-card>
-          <template #header>AI来源分布</template>
+          <template #header>平台调用分布</template>
           <div ref="sourceChartRef" style="height: 300px;"></div>
         </el-card>
       </el-col>
@@ -156,6 +198,7 @@ const aiStats = reactive({
   total_ai_responses: 0,
   by_source: {},
   by_model: [],
+  by_platform: {},
   api_calls_saved: 0,
   savings_rate: 0,
 })
@@ -174,14 +217,7 @@ const topQuestions = ref([])
 // Computed properties
 const topModelName = computed(() => {
   if (tokenStats.by_model.length === 0) return '-'
-  const modelNames = {
-    deepseek: 'DeepSeek',
-    qwen: '通义千问',
-    doubao: '豆包',
-    openai: 'OpenAI',
-    gemini: 'Gemini',
-  }
-  return modelNames[tokenStats.by_model[0]?.model_name] || tokenStats.by_model[0]?.model_name || '-'
+  return MODEL_NAMES[tokenStats.by_model[0]?.model_name] || tokenStats.by_model[0]?.model_name || '-'
 })
 
 // Format tokens (K/M)
@@ -190,6 +226,72 @@ const formatTokens = (num) => {
   if (num >= 1000000) return (num / 1000000).toFixed(1) + 'M'
   if (num >= 1000) return (num / 1000).toFixed(1) + 'K'
   return num.toString()
+}
+
+const PLATFORM_NAMES = {
+  pinduoduo: '拼多多',
+  qianniu: '千牛/淘宝',
+  douyin: '抖音',
+  wechat: '微信',
+}
+
+const PLATFORM_COLORS = {
+  pinduoduo: '#e74c3c',
+  qianniu: '#f39c12',
+  douyin: '#1a1a2e',
+  wechat: '#07c160',
+  unknown: '#909399',
+}
+
+const MODEL_NAMES = {
+  deepseek: 'DeepSeek',
+  qwen: '通义千问',
+  doubao: '豆包',
+  openai: 'OpenAI',
+  gemini: 'Gemini',
+}
+
+const MODEL_COLORS = {
+  deepseek: '#409eff',
+  qwen: '#67c23a',
+  doubao: '#e6a23c',
+  openai: '#f56c6c',
+  gemini: '#909399',
+}
+
+// Model breakdown table data
+const modelTableData = computed(() => {
+  return tokenStats.by_model
+    .map(m => ({
+      ...m,
+      display_name: MODEL_NAMES[m.model_name] || m.model_name,
+      color: MODEL_COLORS[m.model_name] || '#909399',
+    }))
+    .sort((a, b) => b.cost_estimate - a.cost_estimate)
+})
+
+// Custom summary row for model table
+const getModelSummaries = ({ columns, data }) => {
+  const sums = []
+  columns.forEach((col, index) => {
+    if (index === 0) {
+      sums[index] = '合计'
+      return
+    }
+    const prop = col.property
+    if (['prompt_tokens', 'completion_tokens', 'total_tokens', 'request_count'].includes(prop)) {
+      const total = data.reduce((acc, row) => acc + (row[prop] || 0), 0)
+      sums[index] = prop === 'request_count' ? total : formatTokens(total)
+    } else if (prop === 'cost_estimate') {
+      const total = data.reduce((acc, row) => acc + (row[prop] || 0), 0)
+      sums[index] = '¥' + total.toFixed(4)
+    } else if (prop === 'percentage') {
+      sums[index] = '100%'
+    } else {
+      sums[index] = ''
+    }
+  })
+  return sums
 }
 
 const fetchData = async () => {
@@ -257,15 +359,19 @@ const renderSourceChart = () => {
     sourceChart = echarts.init(sourceChartRef.value)
   }
   
-  const data = [
-    { value: aiStats.by_source?.knowledge_base || 0, name: '知识库' },
-    { value: aiStats.by_source?.cache || 0, name: '缓存' },
-    { value: aiStats.by_source?.openai || 0, name: 'API调用' },
-    { value: aiStats.by_source?.template || 0, name: '模板' },
-  ].filter(d => d.value > 0)
+  const data = Object.entries(aiStats.by_platform || {}).map(([key, val]) => ({
+    value: val.count,
+    name: PLATFORM_NAMES[key] || val.name || key,
+    itemStyle: { color: PLATFORM_COLORS[key] || '#909399' },
+  })).filter(d => d.value > 0)
   
   const option = {
     tooltip: { trigger: 'item' },
+    legend: {
+      bottom: 0,
+      itemWidth: 14,
+      itemHeight: 14,
+    },
     series: [{
       type: 'pie',
       radius: ['40%', '70%'],
@@ -276,7 +382,7 @@ const renderSourceChart = () => {
     }],
   }
   
-  sourceChart.setOption(option)
+  sourceChart.setOption(option, true)
 }
 
 const renderTokenTrendChart = () => {
@@ -339,21 +445,8 @@ const renderModelPieChart = () => {
     modelPieChart = echarts.init(modelPieChartRef.value)
   }
   
-  const modelNames = {
-    deepseek: 'DeepSeek',
-    qwen: '通义千问',
-    doubao: '豆包',
-    openai: 'OpenAI',
-    gemini: 'Gemini',
-  }
-  
-  const colors = {
-    deepseek: '#409eff',
-    qwen: '#67c23a',
-    doubao: '#e6a23c',
-    openai: '#f56c6c',
-    gemini: '#909399',
-  }
+  const modelNames = MODEL_NAMES
+  const colors = MODEL_COLORS
   
   const data = tokenStats.by_model.map(m => ({
     value: m.total_tokens,
@@ -469,5 +562,23 @@ onUnmounted(() => {
   padding: 2px 8px;
   border-radius: 4px;
   margin: 2px;
+}
+
+.model-table {
+  margin-top: 20px;
+}
+
+.model-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  margin-right: 8px;
+  vertical-align: middle;
+}
+
+.cost-value {
+  color: #e6a23c;
+  font-weight: 600;
 }
 </style>

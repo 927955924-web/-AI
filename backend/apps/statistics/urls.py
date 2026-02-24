@@ -2,7 +2,7 @@
 URL configuration for statistics app.
 """
 from django.urls import path
-from .views import OverviewView, AIUsageView, TopQuestionsView, ShopStatsView, TokenUsageStatsView
+from .views import OverviewView, AIUsageView, TopQuestionsView, ShopStatsView, TokenUsageStatsView, DailyStatsView
 from .monitor_views import MonitorView
 
 urlpatterns = [
@@ -12,4 +12,5 @@ urlpatterns = [
     path('shops/<str:shop_id>/', ShopStatsView.as_view(), name='stats-shop'),
     path('monitor/', MonitorView.as_view(), name='stats-monitor'),
     path('token-usage/', TokenUsageStatsView.as_view(), name='stats-token-usage'),
+    path('daily/', DailyStatsView.as_view(), name='stats-daily'),
 ]

@@ -23,7 +23,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
     resume: (shopId) => ipcRenderer.invoke('shops:resume', shopId),
     logout: (platformId) => ipcRenderer.invoke('shops:logout', platformId),
     select: (shop) => ipcRenderer.invoke('shops:select', shop),
-    hide: () => ipcRenderer.invoke('shops:hide')
+    hide: () => ipcRenderer.invoke('shops:hide'),
+    show: () => ipcRenderer.invoke('shops:show')
   },
 
   // Platform operations
@@ -36,7 +37,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Authentication
   auth: {
     login: (username, password) => ipcRenderer.invoke('auth:login', username, password),
-    logout: () => ipcRenderer.invoke('auth:logout')
+    logout: () => ipcRenderer.invoke('auth:logout'),
+    register: (data) => ipcRenderer.invoke('auth:register', data)
   },
 
   // AI operations
@@ -92,6 +94,11 @@ contextBridge.exposeInMainWorld('electronAPI', {
     saveApiSettings: (data) => ipcRenderer.invoke('api:saveSettings', data)
   },
 
+  // Statistics
+  stats: {
+    daily: () => ipcRenderer.invoke('stats:daily')
+  },
+
   // Message events
   messages: {
     onReceived: (callback) => {
@@ -138,6 +145,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     stop: (platformId) => ipcRenderer.invoke('learning:stop', platformId),
     status: (taskId) => ipcRenderer.invoke('learning:status', taskId),
     close: (platformId) => ipcRenderer.invoke('learning:close', platformId),
+    resolveConflict: (conflictId, action, newAnswer) => ipcRenderer.invoke('learning:resolve-conflict', conflictId, action, newAnswer),
     
     // AI Vision learning
     startVisionAgent: (platformId, shopId) => ipcRenderer.invoke('learning:start-vision-agent', platformId, shopId),

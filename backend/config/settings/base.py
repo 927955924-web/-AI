@@ -166,3 +166,7 @@ KB_SIMILARITY_THRESHOLD = float(os.environ.get('KB_SIMILARITY_THRESHOLD', '0.7')
 
 # Cache Settings (configured in environment-specific settings)
 AI_REPLY_CACHE_TTL = 86400  # 24 hours
+
+# Daily Conversation Analysis Settings
+DAILY_ANALYSIS_HOUR = int(os.environ.get('DAILY_ANALYSIS_HOUR', '2'))
+DAILY_ANALYSIS_ENABLED = os.environ.get('DAILY_ANALYSIS_ENABLED', 'true').lower() == 'true'

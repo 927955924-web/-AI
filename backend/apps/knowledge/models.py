@@ -13,6 +13,7 @@ class KnowledgeBase(models.Model):
         ('manual', '手动录入'),
         ('auto_learned', '自动学习'),
         ('ai_generated', 'AI生成'),
+        ('daily_analysis', '每日分析'),
     ]
     
     question = models.TextField(verbose_name='问题')

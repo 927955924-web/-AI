@@ -114,5 +114,26 @@ contextBridge.exposeInMainWorld('debugAPI', {
         ipcRenderer.on('debug:knowledge-results', (event, results) => {
             callback(results);
         });
+    },
+
+    // 纠错：更新或新建知识库条目并标记为正确
+    correctKnowledge: (data) => {
+        return new Promise((resolve, reject) => {
+            const requestId = Date.now() + Math.random();
+            
+            const handler = (event, result) => {
+                if (result.requestId === requestId) {
+                    ipcRenderer.removeListener('debug:correct-knowledge-result', handler);
+                    if (result.success) {
+                        resolve(result.data);
+                    } else {
+                        reject(new Error(result.error));
+                    }
+                }
+            };
+            
+            ipcRenderer.on('debug:correct-knowledge-result', handler);
+            ipcRenderer.send('debug:correct-knowledge', { ...data, requestId });
+        });
     }
 });

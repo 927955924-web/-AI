@@ -48,6 +48,14 @@
             <el-option label="待确认" value="false" />
           </el-select>
         </el-form-item>
+        <el-form-item label="来源">
+          <el-select v-model="filters.source" clearable placeholder="全部" style="width: 120px;">
+            <el-option label="手动录入" value="manual" />
+            <el-option label="自动学习" value="auto_learned" />
+            <el-option label="AI生成" value="ai_generated" />
+            <el-option label="每日分析" value="daily_analysis" />
+          </el-select>
+        </el-form-item>
         <el-form-item>
           <el-button type="primary" @click="() => { currentPage = 1; fetchKnowledge() }">查询</el-button>
         </el-form-item>
@@ -65,6 +73,13 @@
         </el-table-column>
         <el-table-column prop="question" label="问题" min-width="250" show-overflow-tooltip />
         <el-table-column prop="answer" label="回答" min-width="300" show-overflow-tooltip />
+        <el-table-column label="来源" width="100">
+          <template #default="{ row }">
+            <el-tag :type="getSourceType(row.source)" size="small">
+              {{ getSourceLabel(row.source) }}
+            </el-tag>
+          </template>
+        </el-table-column>
         <el-table-column label="状态" width="100">
           <template #default="{ row }">
             <el-tag :type="row.is_correct ? 'success' : 'warning'" size="small">
@@ -175,6 +190,7 @@ const summary = reactive({
 const filters = reactive({
   search: '',
   is_correct: '',
+  source: '',
 })
 
 const form = reactive({
@@ -190,12 +206,34 @@ const rules = {
   answer: [{ required: true, message: '请输入回答', trigger: 'blur' }],
 }
 
+// 来源类型映射
+const getSourceType = (source) => {
+  const typeMap = {
+    'manual': 'success',      // 绿色
+    'auto_learned': '',       // 蓝色 (默认)
+    'ai_generated': 'warning', // 橙色
+    'daily_analysis': 'danger' // 红色/粉色
+  }
+  return typeMap[source] || ''
+}
+
+const getSourceLabel = (source) => {
+  const labelMap = {
+    'manual': '手动录入',
+    'auto_learned': '自动学习',
+    'ai_generated': 'AI生成',
+    'daily_analysis': '每日分析'
+  }
+  return labelMap[source] || '未知'
+}
+
 const fetchKnowledge = async () => {
   loading.value = true
   try {
     const params = { page: currentPage.value }
     if (filters.search) params.search = filters.search
     if (filters.is_correct) params.is_correct = filters.is_correct
+    if (filters.source) params.source = filters.source
     
     const response = await knowledgeApi.list(params)
     if (response.success) {

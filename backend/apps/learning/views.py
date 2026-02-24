@@ -182,3 +182,57 @@ class ResetAllTasksView(APIView):
             'success': True,
             'data': {'reset_count': count}
         })
+
+
+class CheckProductLearnedView(APIView):
+    """
+    检查商品是否已学习过
+    POST /api/v1/learning/check-learned/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        shop_id = request.data.get('shop_id')
+        platform_product_id = request.data.get('platform_product_id')
+        
+        if not shop_id or not platform_product_id:
+            return Response({
+                'success': False,
+                'error': {'message': '缺少shop_id或platform_product_id'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        service = LearningService()
+        result = service.check_product_learned(shop_id, platform_product_id)
+        
+        return Response({
+            'success': True,
+            'data': result
+        })
+
+
+class ResolveConflictView(APIView):
+    """
+    解决知识冲突
+    POST /api/v1/learning/resolve-conflict/
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request):
+        conflict_id = request.data.get('conflict_id')
+        action = request.data.get('action')  # 'keep_old', 'use_new', 'merge'
+        new_answer = request.data.get('new_answer', '')
+        
+        if not conflict_id or not action:
+            return Response({
+                'success': False,
+                'error': {'message': '缺少conflict_id或action'}
+            }, status=status.HTTP_400_BAD_REQUEST)
+        
+        service = LearningService()
+        result = service.resolve_conflict(
+            conflict_id=int(conflict_id),
+            action=action,
+            new_answer=new_answer
+        )
+        
+        return Response(result)

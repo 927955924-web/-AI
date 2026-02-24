@@ -57,7 +57,42 @@ class ApiService {
     } catch (error) {
       return {
         success: false,
-        error: error.response?.data?.error?.message || error.message
+        error: error.response?.data?.error?.message || error.response?.data?.detail || error.message
+      };
+    }
+  }
+
+  async register(data) {
+    try {
+      const response = await this.client.post('/auth/register/', {
+        username: data.username,
+        phone: data.phone,
+        password: data.password,
+        password2: data.password2,
+        invite_code: data.invite_code || ''
+      });
+      return response.data;
+    } catch (error) {
+      // Parse validation errors from DRF
+      const respData = error.response?.data;
+      let errMsg = error.message;
+      if (respData) {
+        if (respData.error?.message) {
+          errMsg = respData.error.message;
+        } else if (respData.detail) {
+          errMsg = respData.detail;
+        } else if (typeof respData === 'object') {
+          // Field validation errors
+          const fieldErrors = Object.entries(respData)
+            .filter(([k, v]) => Array.isArray(v))
+            .map(([k, v]) => v[0])
+            .join('; ');
+          if (fieldErrors) errMsg = fieldErrors;
+        }
+      }
+      return {
+        success: false,
+        error: errMsg
       };
     }
   }
@@ -206,6 +241,21 @@ class ApiService {
   async updateKnowledge(id, data) {
     try {
       const response = await this.client.patch(`/knowledge/${id}/`, data);
+      return {
+        success: true,
+        data: response.data.data || response.data
+      };
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.response?.data?.detail || error.message
+      };
+    }
+  }
+
+  async markKnowledgeCorrect(id) {
+    try {
+      const response = await this.client.post(`/knowledge/${id}/mark_correct/`);
       return {
         success: true,
         data: response.data.data || response.data
@@ -400,6 +450,22 @@ class ApiService {
   async resetAllLearningTasks() {
     try {
       const response = await this.client.post('/learning/reset-all/');
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
+    }
+  }
+
+  async resolveConflict(conflictId, action, newAnswer = '') {
+    try {
+      const response = await this.client.post('/learning/resolve-conflict/', {
+        conflict_id: conflictId,
+        action: action,
+        new_answer: newAnswer
+      });
       return response.data;
     } catch (error) {
       return {
@@ -637,6 +703,21 @@ class ApiService {
     try {
       const params = shopId ? { shop_id: shopId } : {};
       const response = await this.client.get('/ai/training-stats/', { params });
+      return response.data;
+    } catch (error) {
+      return {
+        success: false,
+        error: error.response?.data?.error?.message || error.message
+      };
+    }
+  }
+
+  /**
+   * Get today's daily stats from backend (accurate, database-backed)
+   */
+  async getDailyStats() {
+    try {
+      const response = await this.client.get('/statistics/daily/');
       return response.data;
     } catch (error) {
       return {

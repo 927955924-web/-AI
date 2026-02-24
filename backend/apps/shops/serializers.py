@@ -26,7 +26,8 @@ class ShopSerializer(serializers.ModelSerializer):
         fields = [
             'shop_id', 'shop_name', 'account', 'login_url', 
             'platform_type', 'platform_display', 'status', 'status_display',
-            'config_json', 'notes', 'is_active', 'owner_username',
+            'config_json', 'notes', 'is_active', 'auto_learn_summary',
+            'owner_username',
             'last_login', 'created_at', 'updated_at'
         ]
         read_only_fields = ['shop_id', 'last_login', 'created_at', 'updated_at']
@@ -59,7 +60,8 @@ class ShopUpdateSerializer(serializers.ModelSerializer):
         model = Shop
         fields = [
             'shop_name', 'account', 'password', 'login_url', 
-            'platform_type', 'config_json', 'notes', 'is_active'
+            'platform_type', 'config_json', 'notes', 'is_active',
+            'auto_learn_summary'
         ]
     
     def update(self, instance, validated_data):
@@ -87,7 +89,8 @@ class ShopListSerializer(serializers.ModelSerializer):
         model = Shop
         fields = [
             'shop_id', 'shop_name', 'platform_type', 'platform_display',
-            'status', 'status_display', 'is_active', 'session_count',
+            'status', 'status_display', 'is_active', 'auto_learn_summary',
+            'session_count',
             'last_login', 'created_at', 'config_json', 'account', 'login_url'
         ]
     

@@ -72,19 +72,17 @@ const loading = ref(false)
 
 const providerModels = {
   deepseek: [
-    { label: 'DeepSeek Chat (V3)', value: 'deepseek-chat' },
+    { label: 'DeepSeek Chat (V3) - 2/8 元/百万tokens', value: 'deepseek-chat' },
     { label: 'DeepSeek Reasoner (R1)', value: 'deepseek-reasoner' },
   ],
   qwen: [
-    { label: 'Qwen Turbo', value: 'qwen-turbo' },
-    { label: 'Qwen Plus', value: 'qwen-plus' },
-    { label: 'Qwen Max', value: 'qwen-max' },
+    { label: 'Qwen Turbo - 0.3/0.6 元/百万tokens', value: 'qwen-turbo' },
+    { label: 'Qwen Plus - 0.8/2 元/百万tokens', value: 'qwen-plus' },
+    { label: 'Qwen Max - 2.4/9.6 元/百万tokens', value: 'qwen-max' },
     { label: 'Qwen Long', value: 'qwen-long' },
   ],
   doubao: [
-    { label: '豆包 Seed 1.6', value: 'doubao-seed-1.6' },
-    { label: '豆包 Pro 32K', value: 'doubao-pro-32k' },
-    { label: '豆包 Lite 32K', value: 'doubao-lite-32k' },
+    { label: '豆包 Seed 2.0 Pro (推荐) - 3.2/16 元/百万tokens', value: 'doubao-seed-2-0-pro-260215' },
   ],
   openai: [
     { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },

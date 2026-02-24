@@ -24,8 +24,16 @@ const elements = {
     statusMessage: document.getElementById('statusMessage'),
     kbSelect: document.getElementById('kbSelect'),
     btnAddToKb: document.getElementById('btnAddToKb'),
+    btnCorrect: document.getElementById('btnCorrect'),
     sidebarToggle: document.getElementById('sidebarToggle'),
-    toast: document.getElementById('toast')
+    toast: document.getElementById('toast'),
+    // Correction modal elements
+    correctionModal: document.getElementById('correctionModal'),
+    corrOriginalQ: document.getElementById('corrOriginalQ'),
+    corrNewAnswer: document.getElementById('corrNewAnswer'),
+    corrKbList: document.getElementById('corrKbList'),
+    btnCorrCancel: document.getElementById('btnCorrCancel'),
+    btnCorrConfirm: document.getElementById('btnCorrConfirm')
 };
 
 // 初始化
@@ -93,6 +101,15 @@ function bindEvents() {
     
     // 添加到知识库按钮
     elements.btnAddToKb.addEventListener('click', handleAddToKb);
+    
+    // 纠错按钮
+    elements.btnCorrect.addEventListener('click', handleCorrection);
+    
+    // 纠错弹窗 - 取消
+    elements.btnCorrCancel.addEventListener('click', closeCorrectionModal);
+    
+    // 纠错弹窗 - 确认
+    elements.btnCorrConfirm.addEventListener('click', confirmCorrection);
     
     // 侧边栏切换
     elements.sidebarToggle.addEventListener('click', () => {
@@ -352,6 +369,167 @@ function showToast(message, type = 'info') {
     setTimeout(() => {
         elements.toast.classList.remove('show');
     }, 3000);
+}
+
+// ============ 纠错功能 ============
+
+// 当前纠错选择的知识库条目ID (null = 新建)
+let selectedCorrectionKbId = null;
+
+// 打开纠错弹窗
+async function handleCorrection() {
+    const question = elements.questionContent.value.trim();
+    const correctAnswer = elements.replyContent.value.trim();
+    
+    if (!question || !correctAnswer) {
+        showToast('请先填写问题和正确的回复内容', 'error');
+        return;
+    }
+    
+    if (!currentShopId) {
+        showToast('请选择目标知识库', 'error');
+        return;
+    }
+    
+    // 暂停倒计时
+    if (!isPaused && countdownTimer) {
+        isPaused = true;
+        window.debugAPI.pauseCountdown(true);
+        elements.btnPause.textContent = '继续倒计时 | 自动发送';
+    }
+    
+    // 填充弹窗内容
+    elements.corrOriginalQ.textContent = question;
+    elements.corrNewAnswer.textContent = correctAnswer;
+    elements.corrKbList.innerHTML = '<div class="modal-loading">正在搜索相关知识库条目...</div>';
+    selectedCorrectionKbId = null;
+    
+    // 显示弹窗
+    elements.correctionModal.classList.add('show');
+    
+    // 搜索匹配的知识库条目
+    try {
+        const results = await window.debugAPI.searchKnowledge(question, currentShopId);
+        renderCorrectionKbList(results || [], correctAnswer);
+    } catch (error) {
+        console.error('搜索知识库失败:', error);
+        renderCorrectionKbList([], correctAnswer);
+    }
+}
+
+// 渲染纠错弹窗中的知识库条目列表
+function renderCorrectionKbList(results, correctAnswer) {
+    let html = '';
+    
+    // 显示匹配到的知识库条目
+    if (results.length > 0) {
+        results.slice(0, 5).forEach((item, i) => {
+            const sim = item.similarity ? (item.similarity * 100).toFixed(0) + '%' : '';
+            const itemId = item.id || item.kb_id;
+            html += `
+                <div class="kb-item" data-kb-id="${itemId}" onclick="selectCorrectionItem(this, ${itemId})">
+                    <input type="radio" name="corrKbItem" value="${itemId}">
+                    <div class="kb-item-content">
+                        <div class="kb-item-q">Q: ${escapeHtml(item.question || '')}</div>
+                        <div class="kb-item-a">A: ${escapeHtml(item.answer || '')}</div>
+                        ${sim ? `<div class="kb-item-sim">相似度: ${sim}</div>` : ''}
+                    </div>
+                </div>
+            `;
+        });
+    } else {
+        html += '<div class="kb-empty">未找到匹配的知识库条目</div>';
+    }
+    
+    // "新建条目"选项（始终显示）
+    html += `
+        <div class="kb-item" data-kb-id="new" onclick="selectCorrectionItem(this, null)">
+            <input type="radio" name="corrKbItem" value="new" checked>
+            <div class="kb-item-content">
+                <div class="kb-item-q" style="color:#27ae60;">+ 新建知识库条目（使用纠正后的回复）</div>
+            </div>
+        </div>
+    `;
+    
+    elements.corrKbList.innerHTML = html;
+    
+    // 默认选中"新建"
+    selectedCorrectionKbId = null;
+    const newItem = elements.corrKbList.querySelector('[data-kb-id="new"]');
+    if (newItem) newItem.classList.add('selected');
+}
+
+// 选择纠错条目
+function selectCorrectionItem(el, kbId) {
+    // 取消所有选中
+    elements.corrKbList.querySelectorAll('.kb-item').forEach(item => {
+        item.classList.remove('selected');
+        const radio = item.querySelector('input[type="radio"]');
+        if (radio) radio.checked = false;
+    });
+    
+    // 选中当前
+    el.classList.add('selected');
+    const radio = el.querySelector('input[type="radio"]');
+    if (radio) radio.checked = true;
+    
+    selectedCorrectionKbId = kbId;
+}
+
+// 使函数全局可访问（onclick调用）
+window.selectCorrectionItem = selectCorrectionItem;
+
+// 确认纠错
+async function confirmCorrection() {
+    const question = elements.questionContent.value.trim();
+    const correctAnswer = elements.replyContent.value.trim();
+    
+    if (!question || !correctAnswer) {
+        showToast('数据异常，请重试', 'error');
+        return;
+    }
+    
+    // 禁用确认按钮
+    elements.btnCorrConfirm.disabled = true;
+    elements.btnCorrConfirm.textContent = '纠错中...';
+    
+    try {
+        // 1. 纠正知识库
+        await window.debugAPI.correctKnowledge({
+            shop_id: currentShopId,
+            question: question,
+            correct_answer: correctAnswer,
+            kb_id: selectedCorrectionKbId
+        });
+        
+        // 2. 发送纠正后的回复给买家
+        if (currentMessage) {
+            window.debugAPI.sendReply(correctAnswer);
+        }
+        
+        showToast('纠错成功！已更新知识库并发送正确回复', 'success');
+        closeCorrectionModal();
+        resetState();
+    } catch (error) {
+        console.error('纠错失败:', error);
+        showToast('纠错失败: ' + error.message, 'error');
+    } finally {
+        elements.btnCorrConfirm.disabled = false;
+        elements.btnCorrConfirm.textContent = '确认纠错并发送';
+    }
+}
+
+// 关闭纠错弹窗
+function closeCorrectionModal() {
+    elements.correctionModal.classList.remove('show');
+    selectedCorrectionKbId = null;
+}
+
+// HTML转义
+function escapeHtml(str) {
+    const div = document.createElement('div');
+    div.textContent = str;
+    return div.innerHTML;
 }
 
 // 启动

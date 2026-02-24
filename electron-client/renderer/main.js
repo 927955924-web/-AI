@@ -29,6 +29,12 @@ const appState = {
 const loginModal = document.getElementById('login-modal');
 const loginBtn = document.getElementById('login-btn');
 const logoutBtn = document.getElementById('logout-btn');
+const navAiBtn = document.querySelector('.nav-ai-btn');
+const vipBadge = document.getElementById('vip-badge');
+const aiTestModal = document.getElementById('ai-test-modal');
+const aiTestMessages = document.getElementById('ai-test-messages');
+const aiTestInput = document.getElementById('ai-test-input');
+const aiTestSendBtn = document.getElementById('ai-test-send-btn');
 const shopList = document.getElementById('shop-list');
 const workspaceView = document.getElementById('workspace-view');
 const shopFormModal = document.getElementById('shop-form-modal');
@@ -69,6 +75,7 @@ async function init() {
 
     // Load daily statistics
     await loadDailyStats();
+    startDailyStatsRefresh();
 
     setupEventListeners();
     setupMessageHandlers();
@@ -88,8 +95,22 @@ async function init() {
       }
       await loadShops();
       appState.isLoggedIn = true;
+      updateUILoginState();
       addLogMessage('system', '已自动登录');
-      // Note: 不自动恢复店铺，需要用户手动点击启动
+      
+      // Auto-restore running shops: select the first running shop to create BrowserView and trigger login
+      const runningShop = appState.shops.find(s => s.status === 'running');
+      if (runningShop) {
+        console.log('[UI] Auto-restoring running shop:', runningShop.shop_name);
+        await selectShop(runningShop);
+        addLogMessage('system', `正在恢复店铺 "${runningShop.shop_name}" 的连接...`);
+        
+        // Trigger the start flow to create BrowserView and auto-login
+        const startResult = await window.electronAPI.shops.start(runningShop.shop_id);
+        if (startResult.success) {
+          addLogMessage('system', `店铺 "${runningShop.shop_name}" 正在登录...`);
+        }
+      }
     }
 
     console.log('[UI] init() completed');
@@ -97,6 +118,7 @@ async function init() {
     console.error('[UI] init() error:', error);
     // Show login modal on error
     if (loginModal) loginModal.style.display = 'flex';
+    updateUILoginState();
   }
 }
 
@@ -104,12 +126,55 @@ async function init() {
 function setupEventListeners() {
   // Login
   loginBtn.addEventListener('click', handleLogin);
-  document.getElementById('password').addEventListener('keypress', (e) => {
+  document.getElementById('login-password').addEventListener('keypress', (e) => {
     if (e.key === 'Enter') handleLogin();
   });
 
   // Logout
   logoutBtn.addEventListener('click', handleLogout);
+
+  // VIP/AI button - show AI test dialog
+  if (navAiBtn) {
+    navAiBtn.addEventListener('click', () => {
+      showAiTestModal();
+    });
+  }
+
+  // VIP badge - show login modal
+  if (vipBadge) {
+    vipBadge.addEventListener('click', async () => {
+      // Hide BrowserView to avoid display issues when modal opens
+      await window.electronAPI.shops.hide();
+      loginModal.style.display = 'flex';
+      switchAuthTab('login');
+    });
+  }
+
+  // AI test modal events
+  if (aiTestModal) {
+    document.getElementById('ai-test-close').addEventListener('click', hideAiTestModal);
+    aiTestSendBtn.addEventListener('click', sendAiTestMessage);
+    aiTestInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        sendAiTestMessage();
+      }
+    });
+  }
+
+  // Login modal - click overlay to close (only when logged in)
+  if (loginModal) {
+    loginModal.addEventListener('click', async (e) => {
+      // Only close if clicking on the overlay background, not the modal content
+      if (e.target === loginModal && appState.isLoggedIn) {
+        loginModal.style.display = 'none';
+        // Restore BrowserView if a shop is selected
+        if (appState.selectedShop && appState.selectedShop.status === 'running') {
+          await window.electronAPI.shops.show();
+        }
+      }
+    });
+  }
 
   // Shop form modal
   shopForm.addEventListener('submit', handleShopFormSubmit);
@@ -206,8 +271,8 @@ function setupEventListeners() {
   });
 
   // "打开控制台" button - return to workspace view
-  document.querySelector('.control-btn-area').addEventListener('click', () => {
-    window.electronAPI.shops.hide();
+  document.querySelector('.control-btn-area').addEventListener('click', async () => {
+    await window.electronAPI.shops.hide();
     appState.selectedShop = null;
     workspaceView.style.display = 'block';
     renderShopList();
@@ -229,6 +294,89 @@ function setupEventListeners() {
     }
     enterBatchDeleteMode();
   });
+
+  // "启动全部" button
+  document.getElementById('start-all-btn').addEventListener('click', async () => {
+    if (!requireLogin()) return;
+    const stoppedShops = appState.shops.filter(s => s.status !== 'running');
+    if (stoppedShops.length === 0) {
+      addLogMessage('system', '所有店铺已在运行中');
+      return;
+    }
+    const btn = document.getElementById('start-all-btn');
+    btn.disabled = true;
+    btn.textContent = '启动中...';
+    addLogMessage('system', `正在启动 ${stoppedShops.length} 个店铺...`);
+
+    let successCount = 0;
+    for (const shop of stoppedShops) {
+      try {
+        const result = await window.electronAPI.shops.start(shop.shop_id);
+        if (result.success) {
+          shop.status = 'running';
+          shop.loggedIn = false;
+          shop.paused = false;
+          successCount++;
+          addLogMessage('system', `店铺 "${shop.shop_name}" 已启动`);
+        } else {
+          addLogMessage('error', `店铺 "${shop.shop_name}" 启动失败: ${result.error || '未知错误'}`);
+        }
+      } catch (e) {
+        addLogMessage('error', `店铺 "${shop.shop_name}" 启动异常: ${e.message}`);
+      }
+    }
+
+    // Select the first running shop if none selected
+    if (!appState.selectedShop && successCount > 0) {
+      const firstRunning = appState.shops.find(s => s.status === 'running');
+      if (firstRunning) await selectShop(firstRunning);
+    }
+
+    btn.disabled = false;
+    btn.textContent = '启动全部';
+    renderShopList();
+    renderWorkspaceShops();
+    addLogMessage('system', `启动完成: ${successCount}/${stoppedShops.length} 个店铺`);
+  });
+
+  // "暂停全部" button
+  document.getElementById('stop-all-btn').addEventListener('click', async () => {
+    if (!requireLogin()) return;
+    const runningShops = appState.shops.filter(s => s.status === 'running');
+    if (runningShops.length === 0) {
+      addLogMessage('system', '没有正在运行的店铺');
+      return;
+    }
+    const btn = document.getElementById('stop-all-btn');
+    btn.disabled = true;
+    btn.textContent = '暂停中...';
+    addLogMessage('system', `正在暂停 ${runningShops.length} 个店铺...`);
+
+    // Hide BrowserView first
+    await window.electronAPI.shops.hide();
+    appState.selectedShop = null;
+    workspaceView.style.display = 'block';
+
+    let successCount = 0;
+    for (const shop of runningShops) {
+      try {
+        await window.electronAPI.shops.stop(shop.shop_id);
+        shop.status = 'stopped';
+        shop.loggedIn = false;
+        shop.paused = false;
+        successCount++;
+        addLogMessage('system', `店铺 "${shop.shop_name}" 已暂停`);
+      } catch (e) {
+        addLogMessage('error', `店铺 "${shop.shop_name}" 暂停异常: ${e.message}`);
+      }
+    }
+
+    btn.disabled = false;
+    btn.textContent = '暂停全部';
+    renderShopList();
+    renderWorkspaceShops();
+    addLogMessage('system', `暂停完成: ${successCount}/${runningShops.length} 个店铺`);
+  });
 }
 
 // ============ Message Handlers ============
@@ -245,8 +393,11 @@ function setupMessageHandlers() {
       // Record message receive time for response time calculation
       appState.pendingMessages = appState.pendingMessages || {};
       appState.pendingMessages[data.customerId] = Date.now();
+      console.log(`[ResponseTime] Recorded receive time for customer: ${data.customerId}`);
       updateDailyStatsUI();
       saveDailyStats();
+    } else {
+      console.log('[ResponseTime] No customerId in received message');
     }
     
     // Mark current shop as having new message
@@ -279,8 +430,13 @@ function setupMessageHandlers() {
         const responseTime = (Date.now() - receiveTime) / 1000; // in seconds
         appState.dailyStats.totalResponseTime += responseTime;
         appState.dailyStats.responseCount++;
+        console.log(`[ResponseTime] Customer ${data.customerId}: ${responseTime.toFixed(2)}s, total: ${appState.dailyStats.totalResponseTime.toFixed(2)}s, count: ${appState.dailyStats.responseCount}`);
         delete appState.pendingMessages[data.customerId];
+      } else {
+        console.log(`[ResponseTime] No pending message found for customer: ${data.customerId}`);
       }
+    } else {
+      console.log('[ResponseTime] No customerId in replied message');
     }
     
     updateDailyStatsUI();
@@ -307,30 +463,64 @@ function setupMessageHandlers() {
     addLogMessage('system', data.message);
   });
 
-  // Platform login success - update shop status to "已登录"
+  // Platform login success - update specific shop status to "已登录"
   window.electronAPI.messages.onLoginSuccess((data) => {
-    const { platformId } = data;
-    console.log('[UI] Platform login success:', platformId);
-    // Find shops on this platform that are running and mark as logged in
-    const platformMap = { pinduoduo: 'pdd', qianniu: 'taobao', douyin: 'douyin' };
-    const backendPlatform = platformMap[platformId] || platformId;
-    appState.shops.forEach(shop => {
-      if (shop.platform_type === backendPlatform && shop.status === 'running') {
+    const { platformId, shopId } = data;
+    console.log('[UI] Login success:', platformId, shopId);
+    
+    // Only update the specific shop that logged in
+    if (shopId) {
+      const shop = appState.shops.find(s => s.shop_id === shopId);
+      if (shop && shop.status === 'running') {
         shop.loggedIn = true;
+        renderShopList();
+        addLogMessage('system', `店铺 "${shop.shop_name}" 登录成功`);
       }
-    });
-    renderShopList();
-    addLogMessage('system', `平台 ${platformId} 登录成功`);
+    } else {
+      // Fallback for backwards compatibility - only update if single running shop on platform
+      const platformMap = { pinduoduo: 'pdd', qianniu: 'taobao', douyin: 'douyin' };
+      const backendPlatform = platformMap[platformId] || platformId;
+      const runningShops = appState.shops.filter(shop => 
+        shop.platform_type === backendPlatform && shop.status === 'running'
+      );
+      if (runningShops.length === 1) {
+        runningShops[0].loggedIn = true;
+        renderShopList();
+        addLogMessage('system', `平台 ${platformId} 登录成功`);
+      }
+    }
   });
 }
 
 // ============ Login / Logout ============
+
+// Switch between login and register tabs
+function switchAuthTab(tab) {
+  const loginWrap = document.getElementById('login-form-wrap');
+  const registerWrap = document.getElementById('register-form-wrap');
+  
+  if (tab === 'login') {
+    loginWrap.style.display = 'block';
+    registerWrap.style.display = 'none';
+  } else {
+    loginWrap.style.display = 'none';
+    registerWrap.style.display = 'block';
+  }
+  
+  // Clear errors
+  document.getElementById('login-error').textContent = '';
+  document.getElementById('register-error').textContent = '';
+}
+
+// Make it global for onclick handlers
+window.switchAuthTab = switchAuthTab;
+
 async function handleLogin() {
   const serverUrl = document.getElementById('server-url').value.trim();
-  const username = document.getElementById('username').value.trim();
-  const password = document.getElementById('password').value;
+  const phone = document.getElementById('login-phone').value.trim();
+  const password = document.getElementById('login-password').value;
 
-  if (!serverUrl || !username || !password) {
+  if (!serverUrl || !phone || !password) {
     showLoginError('请填写所有字段');
     return;
   }
@@ -339,14 +529,15 @@ async function handleLogin() {
   loginBtn.textContent = '登录中...';
 
   await window.electronAPI.settings.setServerUrl(serverUrl);
-  const result = await window.electronAPI.auth.login(username, password);
+  const result = await window.electronAPI.auth.login(phone, password);
 
   if (result.success) {
     appState.isLoggedIn = true;
-    const username = result.data.user.username;
+    const username = result.data.user.username || result.data.user.phone;
     document.getElementById('user-display').textContent = username;
     await window.electronAPI.store.set('username', username);
     loginModal.style.display = 'none';
+    updateUILoginState();
     await loadShops();
     addLogMessage('system', '登录成功');
   } else {
@@ -357,12 +548,121 @@ async function handleLogin() {
   loginBtn.textContent = '登录';
 }
 
+// Handle registration
+async function handleRegister() {
+  const phone = document.getElementById('reg-phone').value.trim();
+  const verifyCode = document.getElementById('reg-verify-code').value.trim();
+  const password = document.getElementById('reg-password').value;
+  const password2 = document.getElementById('reg-password2').value;
+  const inviteCode = document.getElementById('reg-invite-code').value.trim();
+  
+  const registerBtn = document.getElementById('register-btn');
+  const registerError = document.getElementById('register-error');
+  
+  // Validation
+  if (!phone) {
+    registerError.textContent = '请输入手机号';
+    return;
+  }
+  if (!password) {
+    registerError.textContent = '请输入密码';
+    return;
+  }
+  if (password !== password2) {
+    registerError.textContent = '两次密码不一致';
+    return;
+  }
+  if (password.length < 6) {
+    registerError.textContent = '密码至少6位';
+    return;
+  }
+  
+  registerBtn.disabled = true;
+  registerBtn.textContent = '注册中...';
+  registerError.textContent = '';
+  
+  try {
+    const serverUrl = document.getElementById('server-url').value.trim();
+    await window.electronAPI.settings.setServerUrl(serverUrl);
+    
+    const result = await window.electronAPI.auth.register({
+      username: phone,
+      phone: phone,
+      password: password,
+      password2: password2,
+      invite_code: inviteCode
+    });
+    
+    if (result.success) {
+      // Auto login after registration
+      appState.isLoggedIn = true;
+      const username = result.data.user.username || result.data.user.phone;
+      document.getElementById('user-display').textContent = username;
+      await window.electronAPI.store.set('username', username);
+      loginModal.style.display = 'none';
+      updateUILoginState();
+      await loadShops();
+      addLogMessage('system', '注册成功，已自动登录');
+    } else {
+      registerError.textContent = result.error || '注册失败';
+    }
+  } catch (error) {
+    registerError.textContent = error.message || '注册出错';
+  }
+  
+  registerBtn.disabled = false;
+  registerBtn.textContent = '注册';
+}
+
+// Make it global for onclick handlers
+window.handleRegister = handleRegister;
+
+// Send verify code (placeholder - backend may not support SMS yet)
+let verifyCodeCountdown = 0;
+function sendVerifyCode() {
+  const phone = document.getElementById('reg-phone').value.trim();
+  const sendBtn = document.getElementById('reg-send-code-btn');
+  
+  if (!phone) {
+    document.getElementById('register-error').textContent = '请先输入手机号';
+    return;
+  }
+  
+  if (verifyCodeCountdown > 0) return;
+  
+  // TODO: Call backend SMS API when available
+  // For now, just show countdown
+  verifyCodeCountdown = 60;
+  sendBtn.disabled = true;
+  
+  const timer = setInterval(() => {
+    verifyCodeCountdown--;
+    if (verifyCodeCountdown > 0) {
+      sendBtn.textContent = `${verifyCodeCountdown}s`;
+    } else {
+      sendBtn.textContent = '发送验证码';
+      sendBtn.disabled = false;
+      clearInterval(timer);
+    }
+  }, 1000);
+  
+  // Show message that SMS is not implemented yet
+  document.getElementById('register-error').textContent = '验证码功能暂未开放，请直接注册';
+  setTimeout(() => {
+    document.getElementById('register-error').textContent = '';
+  }, 3000);
+}
+
+// Make it global for onclick handlers
+window.sendVerifyCode = sendVerifyCode;
+
 async function handleLogout() {
   await window.electronAPI.store.set('tokens', null);
   await window.electronAPI.shops.hide();
   appState.isLoggedIn = false;
   appState.shops = [];
   appState.selectedShop = null;
+  updateUILoginState();
   loginModal.style.display = 'flex';
   renderShopList();
   addLogMessage('system', '已退出登录');
@@ -657,6 +957,7 @@ async function deleteShop(shopId) {
   if (result.success) {
     if (appState.selectedShop && appState.selectedShop.shop_id === shopId) {
       appState.selectedShop = null;
+      await window.electronAPI.shops.hide();
       workspaceView.style.display = 'block';
     }
     addLogMessage('system', `已删除店铺: ${shop.shop_name}`);
@@ -737,15 +1038,24 @@ function renderBatchDeleteView(container) {
     if (!confirm(`确定要删除选中的 ${count} 个店铺吗？`)) return;
 
     let successCount = 0;
+    let needHideBrowserView = false;
     for (const shopId of appState.batchSelectedIds) {
       const result = await window.electronAPI.shops.delete(shopId);
       if (result.success) {
         successCount++;
         if (appState.selectedShop && appState.selectedShop.shop_id === shopId) {
           appState.selectedShop = null;
+          needHideBrowserView = true;
         }
       }
     }
+    
+    // Hide BrowserView if the selected shop was deleted
+    if (needHideBrowserView) {
+      await window.electronAPI.shops.hide();
+      workspaceView.style.display = 'block';
+    }
+    
     addLogMessage('system', `批量删除完成: 成功 ${successCount} 个`);
     appState.batchDeleteMode = false;
     appState.batchSelectedIds = new Set();
@@ -759,13 +1069,36 @@ function renderBatchDeleteView(container) {
 }
 
 // ============ Shop Selection ============
+let isSelectingShop = false;
+
 async function selectShop(shop) {
-  appState.selectedShop = shop;
+  if (!requireLogin()) return;
+  if (isSelectingShop) return;  // Prevent rapid consecutive clicks
+  isSelectingShop = true;
 
-  // Hide workspace view for BrowserView
-  workspaceView.style.display = 'none';
+  try {
+    appState.selectedShop = shop;
 
-  if (appState.activeTab === 'workspace') {
+    // Switch to workspace tab first (this will hide other views like settings, monitoring)
+    if (appState.activeTab !== 'workspace') {
+      // Update tab UI
+      document.querySelectorAll('.nav-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.tab === 'workspace');
+      });
+      appState.activeTab = 'workspace';
+      
+      // Hide all other views
+      const keywordsView = document.getElementById('keywords-view');
+      const monitoringView = document.getElementById('monitoring-view');
+      const settingsView = document.getElementById('settings-view');
+      if (keywordsView) keywordsView.style.display = 'none';
+      if (monitoringView) monitoringView.style.display = 'none';
+      if (settingsView) settingsView.style.display = 'none';
+    }
+
+    // Hide workspace view for BrowserView
+    workspaceView.style.display = 'none';
+
     const result = await window.electronAPI.shops.select(shop);
     if (!result.success) {
       addLogMessage('error', result.error || '打开店铺失败');
@@ -781,10 +1114,12 @@ async function selectShop(shop) {
     }
 
     addLogMessage('system', `已打开店铺: ${shop.shop_name}`);
-  }
 
-  renderShopList();
-  renderWorkspaceShops();
+    renderShopList();
+    renderWorkspaceShops();
+  } finally {
+    isSelectingShop = false;
+  }
 }
 
 // ============ Shop Detail Page ============
@@ -846,10 +1181,8 @@ document.getElementById('sd-save-knowledge').addEventListener('click', async () 
 function showShopDetail(shop) {
   currentDetailShop = shop;
 
-  // Hide BrowserView if open
-  if (appState.selectedShop) {
-    window.electronAPI.shops.hide();
-  }
+  // Always hide BrowserView when opening modal to prevent overlap
+  window.electronAPI.shops.hide();
 
   // Set title
   document.getElementById('shop-detail-title').textContent = `${shop.shop_name} - 店铺详情`;
@@ -1148,6 +1481,9 @@ async function showProductDetail(product) {
   `;
   
   modal.style.display = 'flex';
+
+  // Note: product-detail-modal opens on top of shopDetailModal which already hid BrowserView,
+  // so no extra hide needed here.
   
   // Load QA list
   await loadProductKnowledge(product.product_id);
@@ -1388,6 +1724,9 @@ function updateLearningControlProgress(processed, total) {
 // Start Learning Button Click
 learningStartBtn.addEventListener('click', async () => {
   if (!currentLearningPlatformId) return;
+  
+  // Clear previous conflicts
+  clearLearningConflicts();
   
   learningStartBtn.disabled = true;
   learningStartBtn.textContent = '学习中...';
@@ -1664,6 +2003,142 @@ function addLearningLog(message) {
   }
 }
 
+// Accumulated conflicts during learning
+let pendingConflicts = [];
+
+/**
+ * Show learning conflicts in the control panel
+ */
+function showLearningConflicts(conflicts, productName) {
+  if (!conflicts || conflicts.length === 0) return;
+  
+  // Add to pending conflicts
+  conflicts.forEach(c => {
+    c.productName = productName;
+    pendingConflicts.push(c);
+  });
+  
+  const container = document.getElementById('learning-conflicts');
+  const list = document.getElementById('learning-conflicts-list');
+  const countEl = document.getElementById('learning-conflicts-count');
+  
+  if (!container || !list) return;
+  
+  container.style.display = 'block';
+  countEl.textContent = `${pendingConflicts.length} 条需要确认`;
+  
+  // Clear and rebuild list
+  list.innerHTML = '';
+  
+  pendingConflicts.forEach((conflict, index) => {
+    const item = document.createElement('div');
+    item.className = 'learning-conflict-item';
+    item.id = `conflict-${conflict.existing_id}`;
+    
+    item.innerHTML = `
+      <div class="learning-conflict-question">
+        <span style="color:#ff4d4f;">[${conflict.productName || '商品'}]</span>
+        ${escapeHtml(conflict.question || conflict.existing_question)}
+      </div>
+      <div class="learning-conflict-answers">
+        <div class="learning-conflict-answer old">
+          <span class="learning-conflict-answer-label old">原有答案${conflict.existing_is_correct ? ' (已确认)' : ''}:</span>
+          <span class="learning-conflict-answer-text">${escapeHtml(conflict.existing_answer)}</span>
+        </div>
+        <div class="learning-conflict-answer new">
+          <span class="learning-conflict-answer-label new">新学习答案:</span>
+          <span class="learning-conflict-answer-text">${escapeHtml(conflict.new_answer)}</span>
+        </div>
+      </div>
+      <div class="learning-conflict-actions">
+        <button class="learning-conflict-btn keep-old" onclick="resolveConflict(${conflict.existing_id}, 'keep_old', ${index})">
+          保留原有
+        </button>
+        <button class="learning-conflict-btn use-new" onclick="resolveConflict(${conflict.existing_id}, 'use_new', ${index}, '${escapeJs(conflict.new_answer)}')">
+          使用新的
+        </button>
+        <button class="learning-conflict-btn merge" onclick="resolveConflict(${conflict.existing_id}, 'merge', ${index}, '${escapeJs(conflict.new_answer)}')">
+          合并两者
+        </button>
+      </div>
+    `;
+    
+    list.appendChild(item);
+  });
+}
+
+/**
+ * Resolve a single conflict
+ */
+async function resolveConflict(conflictId, action, index, newAnswer = '') {
+  try {
+    const result = await window.electronAPI.learning.resolveConflict(conflictId, action, newAnswer);
+    
+    if (result && result.success) {
+      // Remove from UI
+      const item = document.getElementById(`conflict-${conflictId}`);
+      if (item) {
+        item.style.opacity = '0.5';
+        item.innerHTML = `<div style="padding:10px;color:#52c41a;">✓ ${result.message || '已处理'}</div>`;
+        setTimeout(() => item.remove(), 1500);
+      }
+      
+      // Remove from pending list
+      pendingConflicts = pendingConflicts.filter(c => c.existing_id !== conflictId);
+      
+      // Update count
+      const countEl = document.getElementById('learning-conflicts-count');
+      if (countEl) {
+        countEl.textContent = `${pendingConflicts.length} 条需要确认`;
+      }
+      
+      // Hide container if no more conflicts
+      if (pendingConflicts.length === 0) {
+        const container = document.getElementById('learning-conflicts');
+        if (container) {
+          setTimeout(() => { container.style.display = 'none'; }, 1500);
+        }
+      }
+      
+      addLearningLog(`冲突已解决: ${result.action}`);
+    } else {
+      addLearningLog(`解决冲突失败: ${result?.message || '未知错误'}`);
+    }
+  } catch (err) {
+    console.error('Resolve conflict error:', err);
+    addLearningLog(`解决冲突出错: ${err.message}`);
+  }
+}
+
+/**
+ * Escape HTML special characters
+ */
+function escapeHtml(text) {
+  if (!text) return '';
+  const div = document.createElement('div');
+  div.textContent = text;
+  return div.innerHTML;
+}
+
+/**
+ * Escape string for use in JS string literal
+ */
+function escapeJs(text) {
+  if (!text) return '';
+  return text.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '\\"').replace(/\n/g, '\\n').replace(/\r/g, '');
+}
+
+/**
+ * Clear pending conflicts (called on new learning session)
+ */
+function clearLearningConflicts() {
+  pendingConflicts = [];
+  const container = document.getElementById('learning-conflicts');
+  const list = document.getElementById('learning-conflicts-list');
+  if (container) container.style.display = 'none';
+  if (list) list.innerHTML = '';
+}
+
 // Learning event listeners
 window.electronAPI.learning.onTaskCreated((data) => {
   updateLearningStatus('学习任务已创建，正在等待平台页面加载...');
@@ -1723,9 +2198,25 @@ window.electronAPI.learning.onProductProcessed((data) => {
   }
   updateLearningProgress();
   updateLearningControlProgress(learningState.processed, learningState.total);
-  const msg = data.success
+  
+  // Check for conflicts
+  if (data.conflicts && data.conflicts.length > 0) {
+    showLearningConflicts(data.conflicts, data.productName);
+  }
+  
+  // Build status message
+  let msg = data.success
     ? `✓ ${data.productName || '商品'} - 生成${data.qaCount || 0}条问答`
     : `✗ ${data.productName || '商品'} - 处理失败`;
+  
+  // Add conflict info to message
+  if (data.conflicts_count > 0) {
+    msg += ` (${data.conflicts_count}条冲突待确认)`;
+  }
+  if (data.was_learned) {
+    msg = `[重复] ${msg}`;
+  }
+  
   addLearningLog(msg);
   updateLearningStatus(`正在处理商品 (${learningState.processed}/${learningState.total})...`);
   updateLearningControlStatus(`正在处理商品 (${learningState.processed}/${learningState.total})...`);
@@ -1842,12 +2333,133 @@ window.electronAPI.learning.onVisionError((data) => {
   addLogMessage('error', `AI视觉学习出错: ${errMsg}`);
 });
 
+// ============ AI Test Chat ============
+let aiTestGenerating = false;
+
+async function showAiTestModal() {
+  if (aiTestModal) {
+    // Hide BrowserView to avoid display issues
+    await window.electronAPI.shops.hide();
+    aiTestModal.style.display = 'flex';
+    aiTestInput.value = '';
+    aiTestInput.focus();
+  }
+}
+
+async function hideAiTestModal() {
+  if (aiTestModal) {
+    aiTestModal.style.display = 'none';
+    // Restore BrowserView if a shop was selected
+    if (appState.selectedShop && appState.selectedShop.status === 'running') {
+      await window.electronAPI.shops.show();
+    }
+  }
+}
+
+function appendAiTestMessage(role, text) {
+  const msgDiv = document.createElement('div');
+  msgDiv.className = `ai-msg ai-msg-${role}`;
+
+  if (role === 'loading') {
+    msgDiv.className = 'ai-msg ai-msg-loading';
+    msgDiv.innerHTML = '<div class="dot-typing"><span></span><span></span><span></span></div>';
+  } else {
+    msgDiv.textContent = text;
+  }
+
+  aiTestMessages.appendChild(msgDiv);
+  aiTestMessages.scrollTop = aiTestMessages.scrollHeight;
+  return msgDiv;
+}
+
+async function sendAiTestMessage() {
+  if (aiTestGenerating) return;
+
+  const text = aiTestInput.value.trim();
+  if (!text) return;
+
+  // Add user message
+  appendAiTestMessage('user', text);
+  aiTestInput.value = '';
+
+  // Show loading
+  aiTestGenerating = true;
+  aiTestSendBtn.disabled = true;
+  const loadingMsg = appendAiTestMessage('loading', '');
+
+  try {
+    const result = await window.electronAPI.ai.generateReply({
+      question: text,
+      shop_id: '',
+      context: '',
+      model: ''
+    });
+
+    // Remove loading
+    if (loadingMsg.parentNode) loadingMsg.remove();
+
+    if (result.success && result.data && result.data.reply) {
+      appendAiTestMessage('bot', result.data.reply);
+    } else {
+      appendAiTestMessage('error', 'AI服务暂时不可用: ' + (result.error || '未知错误'));
+    }
+  } catch (err) {
+    if (loadingMsg.parentNode) loadingMsg.remove();
+    appendAiTestMessage('error', '请求失败: ' + err.message);
+  }
+
+  aiTestGenerating = false;
+  aiTestSendBtn.disabled = false;
+  aiTestInput.focus();
+}
+
+// ============ Login Guard ============
+function requireLogin() {
+  if (appState.isLoggedIn) return true;
+
+  // Show toast prompt
+  const existing = document.querySelector('.login-toast');
+  if (existing) existing.remove();
+
+  const toast = document.createElement('div');
+  toast.className = 'login-toast';
+  toast.innerHTML = '<div class="toast-content"><span>请先登录后再使用此功能</span><button class="toast-btn" id="toast-login-btn">立即登录</button></div>';
+  document.body.appendChild(toast);
+
+  document.getElementById('toast-login-btn').addEventListener('click', () => {
+    toast.remove();
+    loginModal.style.display = 'flex';
+    switchAuthTab('login');
+  });
+
+  setTimeout(() => { if (toast.parentNode) toast.remove(); }, 3000);
+  return false;
+}
+
+function updateUILoginState() {
+  const isLoggedIn = appState.isLoggedIn;
+
+  // Toggle nav tabs (except workspace)
+  document.querySelectorAll('.nav-tab').forEach(tab => {
+    if (tab.dataset.tab !== 'workspace') {
+      tab.style.opacity = isLoggedIn ? '1' : '0.5';
+      tab.style.pointerEvents = isLoggedIn ? 'auto' : 'none';
+    }
+  });
+
+  // Toggle action buttons
+  const startAllBtn = document.getElementById('start-all-btn');
+  const stopAllBtn = document.getElementById('stop-all-btn');
+  if (startAllBtn) startAllBtn.disabled = !isLoggedIn;
+  if (stopAllBtn) stopAllBtn.disabled = !isLoggedIn;
+}
+
 // ============ Shop Form ============
 async function showShopForm(editShop) {
+  if (!requireLogin()) return;
   // Hide BrowserView if a shop is currently open, to avoid it covering the modal
-  if (appState.selectedShop) {
-    window.electronAPI.shops.hide();
-  }
+  // Always hide BrowserView when opening shop form modal
+  await window.electronAPI.shops.hide();
 
   shopFormModal.style.display = 'flex';
 
@@ -1889,7 +2501,7 @@ async function showShopForm(editShop) {
     const config = Object.keys(localConfig).length > 0 ? localConfig : (editShop.config_json || {});
     
     shopForm.system_prompt.value = config.system_prompt || '你是一名专业的电商客服，请根据我提供给你的上下文给出对客户的回复，你只需要输出对客户的回复即可，请勿包含任何其他内容。';
-    shopForm.ai_model.value = config.ai_model || '';
+    shopForm.ai_model.value = config.ai_model || 'deepseek-v3.2';
     
     // Expand "更多设置" section if there are config values
     const moreBody = document.getElementById('sf-more-body');
@@ -2006,6 +2618,7 @@ async function handleShopFormSubmit(e) {
 
 // ============ Tab Switching ============
 function switchTab(tabName) {
+  if (tabName !== 'workspace' && !requireLogin()) return;
   appState.activeTab = tabName;
 
   document.querySelectorAll('.nav-tab').forEach(tab => {
@@ -2662,6 +3275,27 @@ async function saveDailyStats() {
 
 async function loadDailyStats() {
   try {
+    // First, try to get accurate stats from backend
+    const backendStats = await window.electronAPI.stats.daily();
+    if (backendStats && backendStats.success && backendStats.data) {
+      const data = backendStats.data;
+      console.log('[DailyStats] Loaded from backend:', data);
+      
+      // Update UI directly with backend data
+      const repliesEl = document.getElementById('stat-replies');
+      const customersEl = document.getElementById('stat-customers');
+      const avgTimeEl = document.getElementById('stat-avg-time');
+      
+      if (repliesEl) repliesEl.textContent = data.total_replies || 0;
+      if (customersEl) customersEl.textContent = data.unique_buyers || 0;
+      if (avgTimeEl) avgTimeEl.textContent = data.avg_response_time || 0;
+      
+      // Also update local state for session tracking
+      appState.dailyStats.replies = data.total_replies || 0;
+      return;
+    }
+    
+    // Fallback: load from local storage
     const saved = await window.electronAPI.store.get('dailyStats');
     if (saved) {
       const today = new Date().toDateString();
@@ -2689,6 +3323,30 @@ async function loadDailyStats() {
   } catch (error) {
     console.error('[DailyStats] Failed to load:', error);
   }
+}
+
+/**
+ * Periodically refresh daily stats from backend
+ */
+function startDailyStatsRefresh() {
+  // Refresh every 60 seconds
+  setInterval(async () => {
+    try {
+      const backendStats = await window.electronAPI.stats.daily();
+      if (backendStats && backendStats.success && backendStats.data) {
+        const data = backendStats.data;
+        const repliesEl = document.getElementById('stat-replies');
+        const customersEl = document.getElementById('stat-customers');
+        const avgTimeEl = document.getElementById('stat-avg-time');
+        
+        if (repliesEl) repliesEl.textContent = data.total_replies || 0;
+        if (customersEl) customersEl.textContent = data.unique_buyers || 0;
+        if (avgTimeEl) avgTimeEl.textContent = data.avg_response_time || 0;
+      }
+    } catch (error) {
+      // Silently fail - local tracking will continue
+    }
+  }, 60000);
 }
 
 // ============ Log ============
@@ -2735,11 +3393,19 @@ function setupUpdateHandlers() {
     updateInstallBtn.style.display = 'none';
     updateProgressWrap.style.display = 'none';
     addLogMessage('system', `发现新版本 v${data.version}`);
+    const statusEl = document.getElementById('settings-update-status');
+    if (statusEl) statusEl.textContent = `发现新版本 v${data.version}，请在顶部通知栏更新`;
+    const checkBtn = document.getElementById('settings-check-update-btn');
+    if (checkBtn) { checkBtn.disabled = false; checkBtn.textContent = '检查更新'; }
   });
 
   // No update
   window.electronAPI.updater.onUpdateNotAvailable(() => {
     console.log('[Update] Already up to date');
+    const statusEl = document.getElementById('settings-update-status');
+    if (statusEl) statusEl.textContent = '已是最新版本';
+    const checkBtn = document.getElementById('settings-check-update-btn');
+    if (checkBtn) { checkBtn.disabled = false; checkBtn.textContent = '检查更新'; }
   });
 
   // Download progress
@@ -2765,6 +3431,10 @@ function setupUpdateHandlers() {
   window.electronAPI.updater.onUpdateError((data) => {
     console.error('[Update] Error:', data.message);
     updateBar.style.display = 'none';
+    const statusEl = document.getElementById('settings-update-status');
+    if (statusEl) statusEl.textContent = '检查更新失败，请稍后重试';
+    const checkBtn = document.getElementById('settings-check-update-btn');
+    if (checkBtn) { checkBtn.disabled = false; checkBtn.textContent = '检查更新'; }
   });
 
   // Button handlers
@@ -2785,262 +3455,222 @@ function setupUpdateHandlers() {
 }
 
 // ============================================
-// API Settings Management
+// Platform Settings Management (Local Settings Only)
 // ============================================
 
-const apiSettingsState = {
-  provider: 'deepseek',
-  apiKeys: {
-    deepseek_api_key: '',
-    qwen_api_key: '',
-    doubao_api_key: '',
-    openai_api_key: '',
-    gemini_api_key: ''
-  },
-  providerModels: {
-    deepseek: [
-      { label: 'DeepSeek Chat (V3)', value: 'deepseek-chat' },
-      { label: 'DeepSeek Reasoner (R1)', value: 'deepseek-reasoner' }
-    ],
-    qwen: [
-      { label: 'Qwen Turbo', value: 'qwen-turbo' },
-      { label: 'Qwen Plus', value: 'qwen-plus' },
-      { label: 'Qwen Max', value: 'qwen-max' },
-      { label: 'Qwen Long', value: 'qwen-long' }
-    ],
-    doubao: [
-      { label: '豆包 Seed 1.6', value: 'doubao-seed-1.6' },
-      { label: '豆包 Pro 32K', value: 'doubao-pro-32k' },
-      { label: '豆包 Lite 32K', value: 'doubao-lite-32k' }
-    ],
-    openai: [
-      { label: 'GPT-4o Mini', value: 'gpt-4o-mini' },
-      { label: 'GPT-4o', value: 'gpt-4o' },
-      { label: 'GPT-4 Turbo', value: 'gpt-4-turbo' },
-      { label: 'GPT-3.5 Turbo', value: 'gpt-3.5-turbo' }
-    ],
-    gemini: [
-      { label: 'Gemini 2.0 Flash', value: 'gemini-2.0-flash' },
-      { label: 'Gemini 1.5 Pro', value: 'gemini-1.5-pro' },
-      { label: 'Gemini 1.5 Flash', value: 'gemini-1.5-flash' }
-    ]
-  },
-  defaultBaseUrls: {
-    deepseek: 'https://api.deepseek.com/v1',
-    qwen: 'https://dashscope.aliyuncs.com/compatible-mode/v1',
-    doubao: 'https://ark.cn-beijing.volces.com/api/v3',
-    openai: 'https://api.openai.com/v1',
-    gemini: 'https://generativelanguage.googleapis.com/v1beta/openai/'
-  },
-  providerKeyField: {
-    deepseek: 'deepseek_api_key',
-    qwen: 'qwen_api_key',
-    doubao: 'doubao_api_key',
-    openai: 'openai_api_key',
-    gemini: 'gemini_api_key'
-  }
-};
-
-// Initialize API Settings Event Listeners
+// Initialize Settings Event Listeners
 function initApiSettingsListeners() {
-  const form = document.getElementById('api-settings-form');
+  const form = document.getElementById('settings-form');
   if (!form) return;
 
-  const providerSelect = document.getElementById('settings-provider');
-  const modelSelect = document.getElementById('settings-model');
-  const apiKeyInput = document.getElementById('settings-api-key');
-  const baseUrlHint = document.getElementById('settings-base-url-hint');
-  const temperatureSlider = document.getElementById('settings-temperature');
-  const temperatureValue = document.getElementById('settings-temperature-value');
-  const similaritySlider = document.getElementById('settings-similarity');
-  const similarityValue = document.getElementById('settings-similarity-value');
-  const pwdToggle = document.getElementById('settings-pwd-toggle');
   const resetBtn = document.getElementById('settings-reset-btn');
 
-  // Provider change handler
-  providerSelect.addEventListener('change', () => {
-    const provider = providerSelect.value;
-    apiSettingsState.provider = provider;
-    
-    // Update model options
-    updateModelOptions(provider);
-    
-    // Update base URL hint
-    baseUrlHint.textContent = '默认：' + apiSettingsState.defaultBaseUrls[provider];
-    
-    // Update API key field
-    const keyField = apiSettingsState.providerKeyField[provider];
-    apiKeyInput.value = apiSettingsState.apiKeys[keyField] || '';
-  });
-
-  // Temperature slider
-  temperatureSlider.addEventListener('input', (e) => {
-    temperatureValue.textContent = e.target.value;
-  });
-
-  // Similarity slider
-  similaritySlider.addEventListener('input', (e) => {
-    similarityValue.textContent = e.target.value;
-  });
-
-  // Password toggle
-  pwdToggle.addEventListener('click', () => {
-    const type = apiKeyInput.type === 'password' ? 'text' : 'password';
-    apiKeyInput.type = type;
-    pwdToggle.style.opacity = type === 'text' ? '0.8' : '0.5';
+  // Settings sidebar navigation
+  document.querySelectorAll('.settings-nav-item').forEach(navItem => {
+    navItem.addEventListener('click', () => {
+      // Update active nav
+      document.querySelectorAll('.settings-nav-item').forEach(n => n.classList.remove('active'));
+      navItem.classList.add('active');
+      
+      // Show corresponding section
+      const sectionId = navItem.dataset.settingsSection;
+      document.querySelectorAll('.settings-section').forEach(s => s.classList.remove('active'));
+      const targetSection = document.getElementById('section-' + sectionId);
+      if (targetSection) targetSection.classList.add('active');
+    });
   });
 
   // Form submit
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
-    await saveApiSettings();
+    await saveSettings();
   });
 
   // Reset button
   resetBtn.addEventListener('click', () => {
-    loadApiSettings();
+    loadSettings();
   });
 
-  // Initialize model options for default provider
-  updateModelOptions(apiSettingsState.provider);
+  // Version display and check-update button
+  const versionEl = document.getElementById('settings-current-version');
+  const checkUpdateBtn = document.getElementById('settings-check-update-btn');
+  if (versionEl && window.electronAPI.updater.getVersion) {
+    window.electronAPI.updater.getVersion().then(v => {
+      versionEl.textContent = 'v' + v;
+    });
+  }
+  if (checkUpdateBtn) {
+    checkUpdateBtn.addEventListener('click', () => {
+      checkUpdateBtn.disabled = true;
+      checkUpdateBtn.textContent = '检查中...';
+      const statusEl = document.getElementById('settings-update-status');
+      if (statusEl) statusEl.textContent = '正在检查更新...';
+      window.electronAPI.updater.checkUpdate();
+    });
+  }
+
+  // Sync feature toggle states with right panel toggles
+  const settingsAutoReply = document.getElementById('settings-auto-reply');
+  const settingsScenarioMonitor = document.getElementById('settings-scenario-monitor');
+  const settingsOrderDetect = document.getElementById('settings-order-detect');
+  const settingsDebugMode = document.getElementById('settings-debug-mode');
+
+  if (settingsAutoReply) {
+    settingsAutoReply.checked = autoReplyToggle.checked;
+    settingsAutoReply.addEventListener('change', (e) => {
+      autoReplyToggle.checked = e.target.checked;
+      autoReplyToggle.dispatchEvent(new Event('change'));
+    });
+  }
+
+  if (settingsScenarioMonitor) {
+    settingsScenarioMonitor.addEventListener('change', async (e) => {
+      await window.electronAPI.store.set('scenarioMonitor', e.target.checked);
+      addLogMessage('system', `情景监控已${e.target.checked ? '开启' : '关闭'}`);
+    });
+  }
+
+  if (settingsOrderDetect) {
+    settingsOrderDetect.checked = orderDetectToggle.checked;
+    settingsOrderDetect.addEventListener('change', (e) => {
+      orderDetectToggle.checked = e.target.checked;
+      orderDetectToggle.dispatchEvent(new Event('change'));
+    });
+  }
+
+  if (settingsDebugMode) {
+    settingsDebugMode.checked = debugModeToggle.checked;
+    settingsDebugMode.addEventListener('change', (e) => {
+      debugModeToggle.checked = e.target.checked;
+      debugModeToggle.dispatchEvent(new Event('change'));
+    });
+  }
 }
 
-// Update model options based on selected provider
-function updateModelOptions(provider) {
-  const modelSelect = document.getElementById('settings-model');
-  if (!modelSelect) return;
-  
-  const models = apiSettingsState.providerModels[provider] || [];
-  
-  modelSelect.innerHTML = models.map(m => 
-    '<option value="' + m.value + '">' + m.label + '</option>'
-  ).join('');
-}
-
-// Load API settings from backend
-async function loadApiSettings() {
-  const form = document.getElementById('api-settings-form');
+// Load settings from local storage
+async function loadSettings() {
   const saveBtn = document.getElementById('settings-save-btn');
-  if (!form || !saveBtn) return;
-  
-  saveBtn.disabled = true;
-  saveBtn.textContent = '加载中...';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = '加载中...';
+  }
   
   try {
-    const result = await window.electronAPI.api.getApiSettings();
+    const localSettings = await window.electronAPI.store.get('platformSettings') || {};
     
-    if (result.success && result.data) {
-      const data = result.data;
-      
-      // Set provider
-      const provider = data.llm_provider || 'deepseek';
-      apiSettingsState.provider = provider;
-      form.llm_provider.value = provider;
-      
-      // Update models and select
-      updateModelOptions(provider);
-      if (data.llm_model) {
-        form.llm_model.value = data.llm_model;
-      }
-      
-      // Store all API keys (may be masked)
-      ['deepseek_api_key', 'qwen_api_key', 'doubao_api_key', 'openai_api_key', 'gemini_api_key'].forEach(key => {
-        if (data[key]) {
-          apiSettingsState.apiKeys[key] = data[key];
-        }
-      });
-      
-      // Display current provider's key
-      const keyField = apiSettingsState.providerKeyField[provider];
-      form.api_key.value = apiSettingsState.apiKeys[keyField] || '';
-      
-      // Set other fields
-      form.llm_base_url.value = data.llm_base_url || '';
-      form.llm_temperature.value = data.llm_temperature || '0.3';
-      document.getElementById('settings-temperature-value').textContent = form.llm_temperature.value;
-      
-      form.kb_similarity_threshold.value = data.kb_similarity_threshold || '0.7';
-      document.getElementById('settings-similarity-value').textContent = form.kb_similarity_threshold.value;
-      
-      // Update base URL hint
-      document.getElementById('settings-base-url-hint').textContent = 
-        '默认：' + apiSettingsState.defaultBaseUrls[provider];
-      
-      addLogMessage('system', 'API 设置已加载');
-    } else {
-      addLogMessage('error', '加载 API 设置失败: ' + (result.error || '未知错误'));
-    }
+    // Feature toggles
+    const settingsAutoReply = document.getElementById('settings-auto-reply');
+    const settingsOrderDetect = document.getElementById('settings-order-detect');
+    const settingsDebugMode = document.getElementById('settings-debug-mode');
+    const settingsSensitiveFilter = document.getElementById('settings-sensitive-filter');
+    const settingsKeywordTrigger = document.getElementById('settings-keyword-trigger');
+    const settingsScenarioMonitor = document.getElementById('settings-scenario-monitor');
+    
+    if (settingsAutoReply) settingsAutoReply.checked = autoReplyToggle.checked;
+    if (settingsOrderDetect) settingsOrderDetect.checked = orderDetectToggle.checked;
+    if (settingsDebugMode) settingsDebugMode.checked = debugModeToggle.checked;
+    if (settingsSensitiveFilter) settingsSensitiveFilter.checked = localSettings.sensitiveFilter !== false;
+    if (settingsKeywordTrigger) settingsKeywordTrigger.checked = localSettings.keywordTrigger !== false;
+    if (settingsScenarioMonitor) settingsScenarioMonitor.checked = localSettings.scenarioMonitor !== false;
+    
+    // Reply settings
+    const maxReplyLength = document.getElementById('settings-max-reply-length');
+    const replyDelay = document.getElementById('settings-reply-delay');
+    const contextMessages = document.getElementById('settings-context-messages');
+    const mergeMessages = document.getElementById('settings-merge-messages');
+    const mergeWait = document.getElementById('settings-merge-wait');
+    
+    if (maxReplyLength) maxReplyLength.value = localSettings.maxReplyLength || 500;
+    if (replyDelay) replyDelay.value = localSettings.replyDelay || 2;
+    if (contextMessages) contextMessages.value = localSettings.contextMessages || 10;
+    if (mergeMessages) mergeMessages.checked = localSettings.mergeMessages !== false;
+    if (mergeWait) mergeWait.value = localSettings.mergeWaitTime || 5;
+    
+    // Advanced settings
+    const serverUrl = document.getElementById('settings-server-url');
+    const logLevel = document.getElementById('settings-log-level');
+    const autoCleanLogs = document.getElementById('settings-auto-clean-logs');
+    const saveHistory = document.getElementById('settings-save-history');
+    
+    const storedServerUrl = await window.electronAPI.store.get('serverUrl');
+    if (serverUrl) serverUrl.value = storedServerUrl || 'http://120.26.199.225:8080';
+    if (logLevel) logLevel.value = localSettings.logLevel || 'info';
+    if (autoCleanLogs) autoCleanLogs.checked = localSettings.autoCleanLogs !== false;
+    if (saveHistory) saveHistory.checked = localSettings.saveHistory !== false;
+    
+    addLogMessage('system', '设置已加载');
   } catch (error) {
-    console.error('[Settings] Failed to load:', error);
-    addLogMessage('error', '加载 API 设置出错: ' + error.message);
-  } finally {
+    console.error('[Settings] Failed to load settings:', error);
+    addLogMessage('error', '加载设置出错: ' + error.message);
+  }
+  
+  if (saveBtn) {
     saveBtn.disabled = false;
     saveBtn.textContent = '保存设置';
   }
 }
 
-// Save API settings to backend
-async function saveApiSettings() {
-  const form = document.getElementById('api-settings-form');
+// Alias for backward compatibility
+async function loadApiSettings() {
+  await loadSettings();
+}
+
+// Save settings to local storage
+async function saveSettings() {
   const saveBtn = document.getElementById('settings-save-btn');
-  if (!form || !saveBtn) return;
-  
-  saveBtn.disabled = true;
-  saveBtn.textContent = '保存中...';
+  if (saveBtn) {
+    saveBtn.disabled = true;
+    saveBtn.textContent = '保存中...';
+  }
   
   try {
-    const provider = form.llm_provider.value;
-    const apiKey = form.api_key.value.trim();
-    
-    // Validate API key - if it contains **** it's a masked key, user hasn't changed it
-    if (!apiKey) {
-      addLogMessage('error', '请输入 API Key');
-      saveBtn.disabled = false;
-      saveBtn.textContent = '保存设置';
-      return;
-    }
-    
-    // Update apiKeys state (only if it's a new key, not masked)
-    const keyField = apiSettingsState.providerKeyField[provider];
-    if (!apiKey.includes('****')) {
-      apiSettingsState.apiKeys[keyField] = apiKey;
-    }
-    
-    // Prepare payload - only include non-masked keys
-    const payload = {
-      llm_provider: provider,
-      llm_model: form.llm_model.value,
-      llm_base_url: form.llm_base_url.value.trim(),
-      llm_temperature: form.llm_temperature.value,
-      kb_similarity_threshold: form.kb_similarity_threshold.value
+    // Save local settings (feature toggles, reply settings, etc.)
+    const localSettings = {
+      sensitiveFilter: document.getElementById('settings-sensitive-filter')?.checked !== false,
+      keywordTrigger: document.getElementById('settings-keyword-trigger')?.checked !== false,
+      scenarioMonitor: document.getElementById('settings-scenario-monitor')?.checked !== false,
+      maxReplyLength: parseInt(document.getElementById('settings-max-reply-length')?.value) || 500,
+      replyDelay: parseInt(document.getElementById('settings-reply-delay')?.value) || 2,
+      contextMessages: parseInt(document.getElementById('settings-context-messages')?.value) || 10,
+      mergeMessages: document.getElementById('settings-merge-messages')?.checked !== false,
+      mergeWaitTime: parseInt(document.getElementById('settings-merge-wait')?.value) || 5,
+      logLevel: document.getElementById('settings-log-level')?.value || 'info',
+      autoCleanLogs: document.getElementById('settings-auto-clean-logs')?.checked !== false,
+      saveHistory: document.getElementById('settings-save-history')?.checked !== false
     };
+    await window.electronAPI.store.set('platformSettings', localSettings);
     
-    // Add API keys that are not masked
-    Object.keys(apiSettingsState.apiKeys).forEach(key => {
-      const value = apiSettingsState.apiKeys[key];
-      if (value && !value.includes('****')) {
-        payload[key] = value;
-      }
-    });
-    
-    // Also add the current key if it's new
-    if (!apiKey.includes('****')) {
-      payload[keyField] = apiKey;
+    // Save server URL
+    const serverUrl = document.getElementById('settings-server-url')?.value.trim();
+    if (serverUrl) {
+      await window.electronAPI.settings.setServerUrl(serverUrl);
     }
     
-    const result = await window.electronAPI.api.saveApiSettings(payload);
+    // Sync toggle states with right panel
+    const settingsAutoReply = document.getElementById('settings-auto-reply');
+    const settingsOrderDetect = document.getElementById('settings-order-detect');
+    const settingsDebugMode = document.getElementById('settings-debug-mode');
     
-    if (result.success) {
-      addLogMessage('system', result.message || 'API 设置已保存');
-      // Reload to get masked keys
-      await loadApiSettings();
-    } else {
-      addLogMessage('error', '保存失败: ' + (result.error || '未知错误'));
+    if (settingsAutoReply && settingsAutoReply.checked !== autoReplyToggle.checked) {
+      autoReplyToggle.checked = settingsAutoReply.checked;
+      autoReplyToggle.dispatchEvent(new Event('change'));
     }
+    if (settingsOrderDetect && settingsOrderDetect.checked !== orderDetectToggle.checked) {
+      orderDetectToggle.checked = settingsOrderDetect.checked;
+      orderDetectToggle.dispatchEvent(new Event('change'));
+    }
+    if (settingsDebugMode && settingsDebugMode.checked !== debugModeToggle.checked) {
+      debugModeToggle.checked = settingsDebugMode.checked;
+      debugModeToggle.dispatchEvent(new Event('change'));
+    }
+    
+    addLogMessage('system', '设置已保存');
   } catch (error) {
     console.error('[Settings] Failed to save:', error);
-    addLogMessage('error', '保存 API 设置出错: ' + error.message);
-  } finally {
+    addLogMessage('error', '保存设置出错: ' + error.message);
+  }
+  
+  if (saveBtn) {
     saveBtn.disabled = false;
     saveBtn.textContent = '保存设置';
   }

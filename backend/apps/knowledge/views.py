@@ -45,6 +45,11 @@ class KnowledgeViewSet(viewsets.ModelViewSet):
         if category:
             queryset = queryset.filter(category=category)
         
+        # Filter by source
+        source = self.request.query_params.get('source')
+        if source:
+            queryset = queryset.filter(source=source)
+        
         # Search
         search = self.request.query_params.get('search')
         if search:

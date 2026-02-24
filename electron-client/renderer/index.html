@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' https: data:;">
-  <title>电商客服助手</title>
+  <title>AI客服测试</title>
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -13,25 +13,75 @@
     <!-- Login Modal Overlay -->
     <div id="login-modal" class="modal-overlay">
       <div class="modal-card">
-        <h2 class="modal-title">欢迎登录</h2>
-        <div class="modal-tabs">
-          <span class="modal-tab active">登录</span>
-          <span class="modal-tab">注册</span>
+        <!-- Login Form -->
+        <div id="login-form-wrap">
+          <h2 class="modal-title">欢迎登录</h2>
+          <div class="modal-tabs">
+            <span class="modal-tab active" id="tab-login" onclick="switchAuthTab('login')">登录</span>
+            <span class="modal-tab" id="tab-register" onclick="switchAuthTab('register')">注册</span>
+          </div>
+          <div class="form-group">
+            <input type="text" id="server-url" value="http://120.26.199.225:8080" placeholder="服务器地址" />
+          </div>
+          <div class="form-group">
+            <input type="text" id="login-phone" placeholder="手机号" />
+          </div>
+          <div class="form-group">
+            <input type="password" id="login-password" placeholder="密码" />
+          </div>
+          <button id="login-btn" class="btn btn-login">登录</button>
+          <p id="login-error" class="error-text"></p>
+          <div class="modal-footer">
+            <a href="#" class="modal-link">忘记密码?</a>
+            <a href="#" class="modal-link" onclick="switchAuthTab('register'); return false;">没有账户? 去注册</a>
+          </div>
         </div>
-        <div class="form-group">
-          <input type="text" id="server-url" value="http://127.0.0.1:8000" placeholder="服务器地址" />
+
+        <!-- Register Form -->
+        <div id="register-form-wrap" style="display: none;">
+          <h2 class="modal-title">欢迎注册</h2>
+          <div class="modal-tabs">
+            <span class="modal-tab" id="tab-login2" onclick="switchAuthTab('login')">登录</span>
+            <span class="modal-tab active" id="tab-register2" onclick="switchAuthTab('register')">注册</span>
+          </div>
+          <div class="form-group">
+            <input type="text" id="reg-phone" placeholder="手机号" />
+          </div>
+          <div class="form-group form-group-inline">
+            <input type="text" id="reg-verify-code" placeholder="验证码" class="input-short" />
+            <button type="button" id="reg-send-code-btn" class="btn-send-code" onclick="sendVerifyCode()">发送验证码</button>
+          </div>
+          <div class="form-group">
+            <input type="password" id="reg-password" placeholder="密码" />
+          </div>
+          <div class="form-group">
+            <input type="password" id="reg-password2" placeholder="确认密码" />
+          </div>
+          <div class="form-group">
+            <input type="text" id="reg-invite-code" placeholder="邀请码 (选填)" />
+          </div>
+          <button id="register-btn" class="btn btn-login" onclick="handleRegister()">注册</button>
+          <p id="register-error" class="error-text"></p>
+          <div class="modal-footer" style="justify-content: center;">
+            <a href="#" class="modal-link" onclick="switchAuthTab('login'); return false;">已有账户? 去登录</a>
+          </div>
         </div>
-        <div class="form-group">
-          <input type="text" id="username" placeholder="用户名" />
+      </div>
+    </div>
+
+    <!-- AI Test Chat Modal -->
+    <div id="ai-test-modal" class="modal-overlay" style="display: none;">
+      <div class="ai-test-modal-card">
+        <div class="ai-test-header">
+          <h3 class="ai-test-title">AI客服测试</h3>
+          <span class="ai-test-close" id="ai-test-close">&times;</span>
         </div>
-        <div class="form-group">
-          <input type="password" id="password" placeholder="密码" />
+        <div class="ai-test-messages" id="ai-test-messages">
+          <div class="ai-msg ai-msg-bot">您好！我是AI客服，请输入您的问题来测试AI模型是否正常工作。</div>
         </div>
-        <button id="login-btn" class="btn btn-login">登录</button>
-        <p id="login-error" class="error-text"></p>
-        <div class="modal-footer">
-          <a href="#" class="modal-link">忘记密码?</a>
-          <a href="#" class="modal-link">没有账户? 去注册</a>
+        <div class="ai-test-input-area">
+          <textarea id="ai-test-input" placeholder="输入您的问题..." rows="3"></textarea>
+          <button id="ai-test-send-btn" class="ai-test-send-btn">发送</button>
         </div>
       </div>
     </div>
@@ -292,8 +342,8 @@
                         <div class="sf-field">
                           <select name="ai_model">
                             <option value="">选择AI模型</option>
-                            <option value="doubao-seed-1.6">Doubao-Seed-1.6（推荐）</option>
-                            <option value="deepseek-v3.2">Deepseek-V3.2</option>
+                            <option value="deepseek-v3.2" selected>Deepseek-V3.2（默认）</option>
+                            <option value="doubao-seed-2.0-pro">Doubao-Seed-2.0-Pro</option>
                             <option value="gemini-3.0-pro">Gemini-3.0-Pro</option>
                             <option value="gpt-5">GPT-5</option>
                             <option value="qwen-3-plus">Qwen-3-plus</option>
@@ -379,91 +429,222 @@
 
             <!-- Settings Tab View -->
             <div id="settings-view" class="settings-view" style="display: none;">
-              <div class="settings-header">
-                <h2>&#9881; API 配置</h2>
-                <p class="settings-desc">配置 AI 模型提供商和 API 密钥，保存后自动同步到服务器</p>
-              </div>
-
-              <div class="settings-form-container">
-                <form id="api-settings-form" class="api-settings-form">
-                  
-                  <!-- Provider Selection -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">模型提供商</label>
-                    <div class="api-form-field">
-                      <select name="llm_provider" id="settings-provider" class="api-select">
-                        <option value="deepseek">DeepSeek (推荐)</option>
-                        <option value="qwen">通义千问 (Qwen)</option>
-                        <option value="doubao">豆包 (Doubao)</option>
-                        <option value="openai">OpenAI</option>
-                        <option value="gemini">Gemini</option>
-                      </select>
+              <div class="settings-layout">
+                <!-- Settings Sidebar -->
+                <div class="settings-sidebar">
+                  <div class="settings-sidebar-title">平台设置</div>
+                  <div class="settings-nav">
+                    <div class="settings-nav-item active" data-settings-section="feature-config">
+                      <span class="settings-nav-icon">&#9881;</span>
+                      <span>功能设置</span>
+                    </div>
+                    <div class="settings-nav-item" data-settings-section="reply-config">
+                      <span class="settings-nav-icon">&#128172;</span>
+                      <span>回复设置</span>
+                    </div>
+                    <div class="settings-nav-item" data-settings-section="advanced-config">
+                      <span class="settings-nav-icon">&#128736;</span>
+                      <span>高级设置</span>
                     </div>
                   </div>
+                </div>
 
-                  <!-- API Key Input -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">API Key</label>
-                    <div class="api-form-field api-field-password">
-                      <input type="password" name="api_key" id="settings-api-key" 
-                             placeholder="请输入 API Key" class="api-input" />
-                      <span class="api-pwd-toggle" id="settings-pwd-toggle" title="显示密钥">&#128065;</span>
+                <!-- Settings Main Content -->
+                <div class="settings-main">
+                  <form id="settings-form" class="settings-form">
+
+                    <!-- Section: Feature Settings -->
+                    <div class="settings-section active" id="section-feature-config">
+                      <div class="settings-section-header">
+                        <h3>功能设置</h3>
+                        <p>开启或关闭各项功能</p>
+                      </div>
+
+                      <div class="settings-card">
+                        <div class="settings-toggle-row">
+                          <div class="settings-toggle-info">
+                            <div class="settings-toggle-name">敏感词过滤</div>
+                            <div class="settings-toggle-desc">自动过滤 AI 回复中的敏感词</div>
+                          </div>
+                          <label class="switch settings-switch">
+                            <input type="checkbox" id="settings-sensitive-filter" checked>
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+
+                        <div class="settings-toggle-row">
+                          <div class="settings-toggle-info">
+                            <div class="settings-toggle-name">关键词触发</div>
+                            <div class="settings-toggle-desc">匹配买家关键词后发送预设回复</div>
+                          </div>
+                          <label class="switch settings-switch">
+                            <input type="checkbox" id="settings-keyword-trigger" checked>
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <!-- Model Selection -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">模型</label>
-                    <div class="api-form-field">
-                      <select name="llm_model" id="settings-model" class="api-select">
-                        <!-- Options will be populated dynamically -->
-                      </select>
+                    <!-- Section: Reply Settings -->
+                    <div class="settings-section" id="section-reply-config">
+                      <div class="settings-section-header">
+                        <h3>回复设置</h3>
+                        <p>配置 AI 回复的行为参数</p>
+                      </div>
+
+                      <div class="settings-card">
+                        <!-- Max Reply Length -->
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">最大回复长度</label>
+                          <div class="settings-form-field">
+                            <div class="settings-number-wrap">
+                              <input type="number" name="max_reply_length" id="settings-max-reply-length"
+                                     min="50" max="2000" step="50" value="500" class="settings-number-input" />
+                              <span class="settings-number-unit">字</span>
+                            </div>
+                            <span class="settings-field-hint">AI 单次回复的最大字符数</span>
+                          </div>
+                        </div>
+
+                        <!-- Reply Delay -->
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">回复延迟</label>
+                          <div class="settings-form-field">
+                            <div class="settings-number-wrap">
+                              <input type="number" name="reply_delay" id="settings-reply-delay"
+                                     min="0" max="30" step="1" value="2" class="settings-number-input" />
+                              <span class="settings-number-unit">秒</span>
+                            </div>
+                            <span class="settings-field-hint">收到消息后等待多久再回复，模拟人工打字</span>
+                          </div>
+                        </div>
+
+                        <!-- Context Messages Count -->
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">上下文消息数</label>
+                          <div class="settings-form-field">
+                            <div class="settings-number-wrap">
+                              <input type="number" name="context_messages" id="settings-context-messages"
+                                     min="1" max="20" step="1" value="10" class="settings-number-input" />
+                              <span class="settings-number-unit">条</span>
+                            </div>
+                            <span class="settings-field-hint">AI 参考的历史消息条数，越多越准但速度越慢</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="settings-card">
+                        <div class="settings-card-title">消息合并</div>
+                        <div class="settings-toggle-row">
+                          <div class="settings-toggle-info">
+                            <div class="settings-toggle-name">合并连续消息</div>
+                            <div class="settings-toggle-desc">买家连续发送多条消息时合并处理</div>
+                          </div>
+                          <label class="switch settings-switch">
+                            <input type="checkbox" id="settings-merge-messages" checked>
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+
+                        <div class="settings-form-row" style="margin-top: 12px;">
+                          <label class="settings-form-label">等待时间</label>
+                          <div class="settings-form-field">
+                            <div class="settings-number-wrap">
+                              <input type="number" name="merge_wait_time" id="settings-merge-wait"
+                                     min="1" max="30" step="1" value="5" class="settings-number-input" />
+                              <span class="settings-number-unit">秒</span>
+                            </div>
+                            <span class="settings-field-hint">等待买家输入完毕的时间</span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <!-- Base URL (Optional) -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">API Base URL</label>
-                    <div class="api-form-field">
-                      <input type="text" name="llm_base_url" id="settings-base-url" 
-                             placeholder="留空使用默认地址" class="api-input" />
-                      <span class="api-hint" id="settings-base-url-hint">默认：https://api.deepseek.com/v1</span>
+                    <!-- Section: Advanced Settings -->
+                    <div class="settings-section" id="section-advanced-config">
+                      <div class="settings-section-header">
+                        <h3>高级设置</h3>
+                        <p>服务器连接和系统配置</p>
+                      </div>
+
+                      <div class="settings-card">
+                        <!-- Server URL -->
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">服务器地址</label>
+                          <div class="settings-form-field">
+                            <input type="text" name="server_url" id="settings-server-url" 
+                                   placeholder="http://127.0.0.1:8000" class="settings-input" />
+                            <span class="settings-field-hint">后端 API 服务器地址</span>
+                          </div>
+                        </div>
+
+                        <!-- Log Level -->
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">日志级别</label>
+                          <div class="settings-form-field">
+                            <select name="log_level" id="settings-log-level" class="settings-select">
+                              <option value="error">仅错误</option>
+                              <option value="warn">警告</option>
+                              <option value="info" selected>信息</option>
+                              <option value="debug">调试</option>
+                            </select>
+                            <span class="settings-field-hint">系统日志输出级别</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="settings-card">
+                        <div class="settings-card-title">软件更新</div>
+                        <div class="settings-form-row">
+                          <label class="settings-form-label">当前版本</label>
+                          <div class="settings-form-field">
+                            <div class="settings-version-row">
+                              <span id="settings-current-version" class="settings-version-text">v-.-.-</span>
+                              <button type="button" id="settings-check-update-btn" class="settings-btn settings-btn-primary settings-btn-sm">检查更新</button>
+                            </div>
+                            <span class="settings-field-hint" id="settings-update-status">启动时自动检查更新</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div class="settings-card">
+                        <div class="settings-card-title">数据管理</div>
+                        <div class="settings-toggle-row">
+                          <div class="settings-toggle-info">
+                            <div class="settings-toggle-name">自动清理日志</div>
+                            <div class="settings-toggle-desc">自动清理超过 7 天的日志记录</div>
+                          </div>
+                          <label class="switch settings-switch">
+                            <input type="checkbox" id="settings-auto-clean-logs" checked>
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+
+                        <div class="settings-toggle-row">
+                          <div class="settings-toggle-info">
+                            <div class="settings-toggle-name">记录对话历史</div>
+                            <div class="settings-toggle-desc">保存所有买家对话记录用于分析优化</div>
+                          </div>
+                          <label class="switch settings-switch">
+                            <input type="checkbox" id="settings-save-history" checked>
+                            <span class="slider"></span>
+                          </label>
+                        </div>
+                      </div>
                     </div>
-                  </div>
 
-                  <!-- Temperature Slider -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">温度参数</label>
-                    <div class="api-form-field api-field-slider">
-                      <input type="range" name="llm_temperature" id="settings-temperature" 
-                             min="0" max="1" step="0.1" value="0.3" class="api-slider" />
-                      <span class="api-slider-value" id="settings-temperature-value">0.3</span>
+                    <!-- Footer Buttons (always visible) -->
+                    <div class="settings-footer">
+                      <button type="button" id="settings-reset-btn" class="settings-btn settings-btn-secondary">
+                        重置默认
+                      </button>
+                      <button type="submit" id="settings-save-btn" class="settings-btn settings-btn-primary">
+                        保存设置
+                      </button>
                     </div>
-                    <span class="api-hint">值越高回复越有创意，值越低回复越稳定</span>
-                  </div>
 
-                  <!-- Similarity Threshold Slider -->
-                  <div class="api-form-row">
-                    <label class="api-form-label">相似度阈值</label>
-                    <div class="api-form-field api-field-slider">
-                      <input type="range" name="kb_similarity_threshold" id="settings-similarity" 
-                             min="0.5" max="1" step="0.05" value="0.7" class="api-slider" />
-                      <span class="api-slider-value" id="settings-similarity-value">0.7</span>
-                    </div>
-                    <span class="api-hint">知识库匹配的最低相似度，值越高匹配越严格</span>
-                  </div>
-
-                  <!-- Submit Buttons -->
-                  <div class="api-form-footer">
-                    <button type="button" id="settings-reset-btn" class="api-btn api-btn-secondary">
-                      重置
-                    </button>
-                    <button type="submit" id="settings-save-btn" class="api-btn api-btn-primary">
-                      保存设置
-                    </button>
-                  </div>
-
-                </form>
+                  </form>
+                </div>
               </div>
             </div>
 
@@ -721,6 +902,14 @@
           <div class="learning-progress-bar" id="learning-ctrl-progress-bar"></div>
         </div>
         <div class="learning-progress-text" id="learning-ctrl-progress-text">0 / 0 商品已处理</div>
+      </div>
+      <!-- Conflict List -->
+      <div class="learning-conflicts" id="learning-conflicts" style="display: none;">
+        <div class="learning-conflicts-header">
+          <span class="learning-conflicts-title">发现知识冲突</span>
+          <span class="learning-conflicts-count" id="learning-conflicts-count">0 条需要确认</span>
+        </div>
+        <div class="learning-conflicts-list" id="learning-conflicts-list"></div>
       </div>
       <div class="learning-control-actions">
         <button class="learning-btn learning-btn-primary" id="learning-start-btn">开始学习</button>

@@ -246,13 +246,29 @@ class AIService:
     6. Save response to knowledge base and cache
     """
     
+    # Mapping from model config api_key_setting to database key
+    API_KEY_DB_MAPPING = {
+        'DEEPSEEK_API_KEY': 'deepseek_api_key',
+        'QWEN_API_KEY': 'qwen_api_key',
+        'DOUBAO_API_KEY': 'doubao_api_key',
+        'OPENAI_API_KEY': 'openai_api_key',
+        'GEMINI_API_KEY': 'gemini_api_key',
+    }
+    
     # Token pricing per 1K tokens (in CNY)
+    # DeepSeek: input(cache miss)=0.002, input(cache hit)=0.0002, output=0.003
+    # Using cache miss rate for input as conservative estimate
+    # Qwen pricing updated 2026-02: turbo 0.3/0.6, plus 0.8/2, max 2.4/9.6 per million tokens
     TOKEN_PRICING = {
-        'deepseek': 0.001,
-        'qwen': 0.0008,
-        'doubao': 0.0005,
-        'openai': 0.014,
-        'gemini': 0.0007,
+        'deepseek': {'input': 0.002, 'output': 0.008},  # DeepSeek V3: 2/8 元/百万tokens
+        'qwen': {'input': 0.0003, 'output': 0.0006},    # Qwen Turbo (default model)
+        'qwen-turbo': {'input': 0.0003, 'output': 0.0006},
+        'qwen-plus': {'input': 0.0008, 'output': 0.002},
+        'qwen-max': {'input': 0.0024, 'output': 0.0096},
+        'qwen-flash': {'input': 0.00015, 'output': 0.0015},
+        'doubao': {'input': 0.0032, 'output': 0.016},  # Doubao Seed 2.0 Pro: 3.2/16 元/百万tokens (≤32k)
+        'openai': {'input': 0.01, 'output': 0.03},      # GPT-4o pricing
+        'gemini': {'input': 0.0007, 'output': 0.002},
     }
     
     def __init__(self):
@@ -265,12 +281,21 @@ class AIService:
         self._current_shop = None  # Track current shop for token usage recording
     
     def _normalize_model_name(self, model_version: str) -> str:
-        """Normalize model version to platform name."""
+        """Normalize model version to platform name for pricing lookup."""
         model_lower = (model_version or '').lower()
         if 'deepseek' in model_lower:
             return 'deepseek'
         elif 'qwen' in model_lower:
-            return 'qwen'
+            # Return specific qwen model for accurate pricing
+            if 'turbo' in model_lower:
+                return 'qwen-turbo'
+            elif 'plus' in model_lower:
+                return 'qwen-plus'
+            elif 'max' in model_lower:
+                return 'qwen-max'
+            elif 'flash' in model_lower:
+                return 'qwen-flash'
+            return 'qwen'  # default to qwen-turbo pricing
         elif 'doubao' in model_lower:
             return 'doubao'
         elif 'gpt' in model_lower or 'openai' in model_lower:
@@ -296,9 +321,11 @@ class AIService:
             
             model_name = self._normalize_model_name(model_version)
             
-            # Calculate cost estimate
-            price_per_1k = self.TOKEN_PRICING.get(model_name, 0.001)
-            cost = Decimal(str(total_tokens * price_per_1k / 1000))
+            # Calculate cost estimate with separate input/output pricing
+            pricing = self.TOKEN_PRICING.get(model_name, {'input': 0.002, 'output': 0.003})
+            input_cost = Decimal(str(prompt_tokens * pricing['input'] / 1000))
+            output_cost = Decimal(str(completion_tokens * pricing['output'] / 1000))
+            cost = input_cost + output_cost
             
             TokenUsage.objects.create(
                 prompt_tokens=prompt_tokens,
@@ -382,6 +409,7 @@ class AIService:
         product_names: List[str] = None,
         product_card_ids: List[str] = None,
         platform: str = None,
+        buyer_image_urls: List[str] = None,
     ) -> Dict[str, Any]:
         """
         Generate a reply using knowledge-base-first strategy.
@@ -467,7 +495,7 @@ class AIService:
             # so it can see the context and vary the response
             logger.info(f"Detected repeated question, calling LLM for varied response: {question[:50]}")
             try:
-                reply = self._call_openai(question, context, order_detail, varied=True, model=model)
+                reply = self._call_openai(question, context, order_detail, varied=True, model=model, buyer_image_urls=buyer_image_urls)
                 if reply:
                     return {
                         'reply': reply,
@@ -649,18 +677,20 @@ class AIService:
         
         try:
             # _call_openai now handles model fallback automatically
-            reply = self._call_openai(question, combined_context, order_detail, model=model)
+            reply = self._call_openai(question, combined_context, order_detail, model=model, buyer_image_urls=buyer_image_urls)
             
             if reply:
                 from apps.knowledge.models import KnowledgeBase
                 # Only save to KB if no reference was used (to avoid duplicates)
                 if not kb_reference:
+                    from apps.knowledge.utils import infer_shop_id
+                    resolved_shop_id = infer_shop_id(owner_id=owner_id, shop_id=shop_id)
                     KnowledgeBase.objects.create(
                         question=question,
                         answer=reply,
                         is_correct=False,
                         source='ai_generated',
-                        shop_id=shop_id,
+                        shop_id=resolved_shop_id,
                         owner_id=owner_id,
                     )
                 
@@ -731,11 +761,17 @@ class AIService:
     
     # Model configurations mapping frontend model names to API settings
     MODEL_CONFIGS = {
+        'doubao-seed-2.0-pro': {
+            'provider': 'doubao',
+            'api_key_setting': 'DOUBAO_API_KEY',
+            'base_url': 'https://ark.cn-beijing.volces.com/api/v3',
+            'model': 'doubao-seed-2-0-pro-260215',
+        },
         'doubao-seed-1.6': {
             'provider': 'doubao',
             'api_key_setting': 'DOUBAO_API_KEY',
             'base_url': 'https://ark.cn-beijing.volces.com/api/v3',
-            'model': 'doubao-seed-1.6',
+            'model': 'doubao-seed-2-0-pro-260215',
         },
         'deepseek-v3.2': {
             'provider': 'deepseek',
@@ -786,7 +822,7 @@ class AIService:
             'provider': 'doubao',
             'api_key_setting': 'DOUBAO_API_KEY',
             'base_url': 'https://ark.cn-beijing.volces.com/api/v3',
-            'model': 'doubao-vision-pro-32k',
+            'model': 'doubao-seed-2-0-pro-260215',
             'is_vision': True,
         },
     }
@@ -794,10 +830,31 @@ class AIService:
     # Fallback model priority order (used when primary model is unavailable)
     FALLBACK_MODEL_PRIORITY = [
         'deepseek-v3.2',    # DeepSeek as first fallback (cost-effective)
-        'qwen-3-plus',       # Qwen as second fallback
-        'gpt-4o-mini',       # GPT as third fallback
-        'gemini-3.0-pro',    # Gemini as fourth fallback
+        'doubao-seed-2.0-pro',  # Doubao as second fallback (text priority 2)
+        'qwen-3-plus',       # Qwen as third fallback
+        'gpt-4o-mini',       # GPT as fourth fallback
+        'gemini-3.0-pro',    # Gemini as fifth fallback
     ]
+    
+    def _get_api_key(self, setting_name: str) -> str:
+        """
+        Get API key from database first, fallback to environment variable.
+        This allows users to configure API keys via web UI without restarting.
+        """
+        # Try database first
+        db_key = self.API_KEY_DB_MAPPING.get(setting_name)
+        if db_key:
+            try:
+                from apps.accounts.models import SystemSettings
+                setting = SystemSettings.objects.filter(key=db_key).first()
+                if setting and setting.value and setting.value.strip():
+                    return setting.value.strip()
+            except Exception as e:
+                logger.debug(f"[API Key] 从数据库获取 {db_key} 失败: {e}")
+        
+        # Fallback to environment variable via Django settings
+        api_key = getattr(settings, setting_name, '')
+        return api_key if api_key else ''
     
     def _check_model_health(self, model: str) -> bool:
         """
@@ -815,7 +872,7 @@ class AIService:
         
         # Check if API key is configured
         model_config = self.MODEL_CONFIGS[model]
-        api_key = getattr(settings, model_config['api_key_setting'], '')
+        api_key = self._get_api_key(model_config['api_key_setting'])
         
         if not api_key:
             logger.info(f"[模型健康检查] {model}: API Key 未配置")
@@ -883,7 +940,7 @@ class AIService:
         # If a specific model is selected, use its configuration
         if model and model in self.MODEL_CONFIGS:
             model_config = self.MODEL_CONFIGS[model]
-            api_key = getattr(settings, model_config['api_key_setting'], '')
+            api_key = self._get_api_key(model_config['api_key_setting'])
             
             config = {
                 'provider': model_config['provider'],
@@ -917,7 +974,7 @@ class AIService:
             'doubao': {
                 'api_key': getattr(settings, 'DOUBAO_API_KEY', ''),
                 'base_url': getattr(settings, 'DOUBAO_BASE_URL', 'https://ark.cn-beijing.volces.com/api/v3'),
-                'model': getattr(settings, 'DOUBAO_MODEL', 'doubao-seed-1.6'),
+                'model': getattr(settings, 'DOUBAO_MODEL', 'doubao-seed-2-0-pro-260215'),
             },
             'gemini': {
                 'api_key': getattr(settings, 'GEMINI_API_KEY', ''),
@@ -937,12 +994,22 @@ class AIService:
         context: str = None,
         order_detail: Dict = None,
         varied: bool = False,
-        model: str = None
+        model: str = None,
+        buyer_image_urls: List[str] = None
     ) -> Optional[str]:
         """
         Call LLM API to generate a reply with automatic fallback to backup models.
         Supports DeepSeek, OpenAI, Qwen, Doubao, Gemini, etc.
+        
+        Enhanced with:
+        - Multi-turn message parsing for better context understanding
+        - Multimodal image support for Doubao-Seed-2.0-pro
         """
+        # Default to DeepSeek for text conversations when no model specified
+        if not model:
+            model = 'deepseek-v3.2'
+            logger.info(f"[模型调用] 未指定模型，默认使用 DeepSeek")
+        
         # Get an available model (primary or fallback)
         primary_model = model
         available_model = self._get_available_model(primary_model)
@@ -979,7 +1046,7 @@ class AIService:
                 "2. 如果买家只发送了商品链接或商品卡片，没有提出具体问题，请主动询问需求：'亲，在的，请问您对这款商品有什么想了解的呢？'\n"
                 "3. 如果提供了【知识库资料】或【参考答案】，优先使用其中明确陈述的信息来回答；不匹配当前问题则忽略，自己组织回答\n"
                 "4. 如果知识库资料标注为“自动学习/AI生成”且“未确认”，只把它当作可能线索；不确定就追问1个关键点再回答\n"
-                "5. 如果买家询问产品是否适合某种用途，根据常识和产品类型给出建议性回答\n"
+                "5. 如果买家询问产品是否适合某种用途，且知识库/图片分析中有明确相关信息，据实回答；如果没有相关资料，诚实说'这个我帮您确认一下哈'，不要根据常识猜测\n"
                 "6. 只有涉及精确数值参数（价格、库存、电压、功率等）且你不确定时，才引导查看详情页\n"
                 "7. 使用亲切自然的语气，像真人客服一样交流\n"
                 "8. 回复控制在80字以内，必要时可两句话，不要太生硬\n"
@@ -987,7 +1054,16 @@ class AIService:
                 "10. 如果买家重复提问，换种表达方式回答\n"
                 "11. 如果提供了订单信息，结合订单状态回答\n"
                 "12. 禁止编造具体数值参数，不确定的数值说'建议您确认一下详情页哦'\n"
-                "13. 禁止说'正在查询'、'请稍等'这类无意义的话，要么直接回答问题，要么询问买家需求"
+                "13. 禁止说'正在查询'、'请稍等'这类无意义的话，要么直接回答问题，要么询问买家需求\n"
+                "14. 严禁杜撰产品功能或技术规格！你不知道的信息绝对不能编造。如果买家提供了图片证据（如商品详情页截图）说明产品支持某功能，你必须尊重图片中的事实，不得否认或编造理由反驳\n"
+                "15. 如果买家发送了图片且【买家发送的图片内容】中有明确信息，以图片实际内容为准回答，不要与图片内容矛盾\n"
+                "16. 当你的知识库信息与买家提供的店铺图片/描述冲突时，优先信任店铺图片和描述的实际内容，承认可能存在信息差异并协助核实\n"
+                "17. 【极重要】你没有发送图片、文件、截图、报告的能力！严禁声称'已发送图片'、'截图已上传'、'图片发至窗口'等虚假承诺。如果买家需要图片或文件资料，正确做法是：告知'亲，我这边无法直接发送图片文件，您可以在商品详情页查看相关资料，或者联系人工客服获取哦~'\n"
+                "18. 严禁在回复中虚构任何已完成的操作（如'已发送'、'已上传'、'已帮您处理'），只能描述你真正能做的事情——即文字回复买家问题\n"
+                "19. 【物流承诺禁令】严禁承诺具体的发货时间或快递公司！不得说'今天发'、'明天发'、'发顺丰'、'发京东'等，除非知识库中有店铺的明确政策。正确回复：'亲，我们会尽快为您安排发货的，具体以实际发出为准哦~' 或 '亲，发货时间和快递以实际为准，下单后我们会尽快处理~'\n"
+                "20. 【备注禁令】严禁声称'已帮您备注'、'已备注XX'，你没有备注订单的能力！如买家有特殊要求，正确回复：'亲，您的需求我已记录，下单时可以在订单备注里写明哦~' 或 '亲，建议您下单时在备注栏注明，仓库会按备注处理~'\n"
+                "21. 【拼多多运费险规则】严禁使用'运费险'这个词！拼多多平台没有运费险，只有'退货包运费'服务。如果买家询问运费险相关问题，回复时用'退货包运费'代替。是否有退货包运费服务必须根据知识库中该店铺的实际政策回答，不能凭空编造。如果知识库没有相关信息，回复：'亲，关于退货包运费的问题，建议您查看商品详情页或咨询人工客服确认哦~'\n"
+                "22. 【保修规则】禁止主动承诺1年保修！关于保修问题，首先引导买家查看商品详情页的保修说明。如果买家反复询问保修问题超过2次，则回复：'亲，本产品保修3个月哦~'"
             )
             
             # Increase temperature for varied responses
@@ -1001,28 +1077,87 @@ class AIService:
                 import re
                 conv_text = None
                 kb_text = None
+                image_analysis_text = None
+                video_analysis_text = None
                 
-                m_conv = re.search(r'【对话历史】\n([\s\S]*?)(?=\n\n【知识库资料】\n|$)', context)
+                m_conv = re.search(r'【对话历史】\n([\s\S]*?)(?=\n\n【知识库资料】\n|\n\n【买家发送的图片内容】\n|\n\n【买家发送的视频内容】\n|$)', context)
                 if m_conv:
                     conv_text = (m_conv.group(1) or '').strip()
                 
-                m_kb = re.search(r'【知识库资料】\n([\s\S]*)$', context)
+                m_kb = re.search(r'【知识库资料】\n([\s\S]*?)(?=\n\n【买家发送的图片内容】\n|\n\n【买家发送的视频内容】\n|$)', context)
                 if m_kb:
                     kb_text = (m_kb.group(1) or '').strip()
                 
-                if not conv_text and not kb_text:
+                m_img = re.search(r'【买家发送的图片内容】\n([\s\S]*?)(?=\n\n【买家发送的视频内容】\n|$)', context)
+                if m_img:
+                    image_analysis_text = (m_img.group(1) or '').strip()
+                
+                m_vid = re.search(r'【买家发送的视频内容】\n([\s\S]*?)$', context)
+                if m_vid:
+                    video_analysis_text = (m_vid.group(1) or '').strip()
+                
+                if not conv_text and not kb_text and not image_analysis_text and not video_analysis_text:
                     conv_text = context.strip()
                 
+                # Enhanced: Parse conversation history into multi-turn message format
+                # Provides much better context understanding for Doubao-Seed-2.0-pro (256k context)
                 if conv_text:
-                    messages.append({
-                        "role": "system",
-                        "content": f"以下是与买家的对话历史（仅用于理解上下文）：\n{conv_text}"
-                    })
+                    conv_lines = conv_text.split('\n')
+                    turn_messages = []
+                    
+                    for line in conv_lines:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        if line.startswith('买家:') or line.startswith('买家：'):
+                            buyer_msg = re.split(r'[:：]', line, 1)[-1].strip()
+                            if buyer_msg:
+                                turn_messages.append({"role": "user", "content": buyer_msg})
+                        elif line.startswith('客服:') or line.startswith('客服：'):
+                            agent_msg = re.split(r'[:：]', line, 1)[-1].strip()
+                            if agent_msg:
+                                turn_messages.append({"role": "assistant", "content": agent_msg})
+                    
+                    if len(turn_messages) >= 2:
+                        # Multi-turn format: insert history as real user/assistant turns
+                        recent_turns = turn_messages[-8:]
+                        # Remove last message if it duplicates the current question
+                        if recent_turns and recent_turns[-1]['role'] == 'user':
+                            last_msg = recent_turns[-1]['content'].strip()
+                            if last_msg == question.strip() or question.strip().startswith(last_msg):
+                                recent_turns = recent_turns[:-1]
+                        
+                        if recent_turns:
+                            messages.append({
+                                "role": "system",
+                                "content": "以下是与买家的对话历史，请结合上下文理解买家当前的意图和需求："
+                            })
+                            messages.extend(recent_turns)
+                            logger.info(f"[上下文] 多轮消息格式，共{len(recent_turns)}条历史")
+                    else:
+                        # Fallback: single system message for unstructured context
+                        messages.append({
+                            "role": "system",
+                            "content": f"以下是与买家的对话历史（仅用于理解上下文）：\n{conv_text}"
+                        })
                 
                 if kb_text:
                     messages.append({
                         "role": "system",
                         "content": "以下是店铺/商品知识库资料（可作为事实依据；请融合进回复，不要对外提及“知识库”）：\n" + kb_text
+                    })
+                
+                # Include image/video analysis text for richer understanding
+                if image_analysis_text:
+                    messages.append({
+                        "role": "system",
+                        "content": f"以下是对买家发送图片的AI分析结果，请结合此信息回答：\n{image_analysis_text}"
+                    })
+                
+                if video_analysis_text:
+                    messages.append({
+                        "role": "system",
+                        "content": f"以下是对买家发送视频的AI分析结果，请结合此信息回答：\n{video_analysis_text}"
                     })
             
             if varied:
@@ -1070,13 +1205,36 @@ class AIService:
                 if chat_images:
                     messages.append({
                         "role": "system",
-                        "content": f"买家在聊天中发送了{len(chat_images)}张图片，请根据上下文适当回应。"
+                        "content": f"买家在聊天中发送了{len(chat_images)}张图片，请结合图片内容和上下文回答。"
                     })
             
-            messages.append({
-                "role": "user",
-                "content": question
-            })
+            # Build final user message - support multimodal images for Doubao-Seed-2.0-pro
+            # When buyer_image_urls are provided and model supports vision, include images directly
+            model_config = self.MODEL_CONFIGS.get(available_model, {})
+            is_doubao_model = model_config.get('provider') == 'doubao'
+            
+            if buyer_image_urls and is_doubao_model:
+                # Multimodal: send images + text together for Doubao's unified understanding
+                user_content = []
+                for img_url in buyer_image_urls[:3]:  # Limit to 3 images
+                    user_content.append({
+                        "type": "image_url",
+                        "image_url": {"url": img_url}
+                    })
+                user_content.append({
+                    "type": "text",
+                    "text": question
+                })
+                messages.append({
+                    "role": "user",
+                    "content": user_content
+                })
+                logger.info(f"[多模态] 使用 Doubao 多模态，图片{len(buyer_image_urls[:3])}张 + 文字问题")
+            else:
+                messages.append({
+                    "role": "user",
+                    "content": question
+                })
             
             response = client.chat.completions.create(
                 model=config['model'],
@@ -1112,16 +1270,17 @@ class AIService:
         context: str = None,
         order_detail: Dict = None,
         varied: bool = False,
-        model: str = None
+        model: str = None,
+        buyer_image_urls: List[str] = None
     ) -> Optional[str]:
         """Legacy method - redirects to _call_llm for backward compatibility."""
-        return self._call_llm(question, context, order_detail, varied=varied, model=model)
+        return self._call_llm(question, context, order_detail, varied=varied, model=model, buyer_image_urls=buyer_image_urls)
     
     def call_vision_model(
         self,
         prompt: str,
         image_base64: str,
-        model: str = 'qwen-vl-plus'
+        model: str = 'doubao-vision'
     ) -> Dict[str, Any]:
         """
         Call vision language model to analyze an image.
@@ -1130,13 +1289,13 @@ class AIService:
         Args:
             prompt: The instruction/question for the vision model
             image_base64: Base64 encoded image data (without data:image prefix)
-            model: Vision model to use (default: qwen-vl-plus)
+            model: Vision model to use (default: doubao-vision, priority 1)
         
         Returns:
             dict with keys: success, content, error, model_used
         """
-        # Vision model fallback order
-        vision_models = ['qwen-vl-plus', 'doubao-vision', 'qwen-vl-max']
+        # Vision model fallback order: Doubao priority 1
+        vision_models = ['doubao-vision', 'qwen-vl-plus', 'qwen-vl-max']
         
         # Debug: Log API key status
         logger.info(f"[视觉模型] 检查API Key配置...")
@@ -1161,7 +1320,7 @@ class AIService:
             if not model_config.get('is_vision'):
                 continue
             
-            api_key = getattr(settings, model_config['api_key_setting'], '')
+            api_key = self._get_api_key(model_config['api_key_setting'])
             
             if not api_key:
                 logger.info(f"[视觉模型] {vm} 的API Key未配置 (setting: {model_config['api_key_setting']})，跳过")
@@ -1247,7 +1406,7 @@ class AIService:
         self,
         image_base64: str,
         page_type: str = 'list',
-        model: str = 'qwen-vl-plus'
+        model: str = 'doubao-vision'
     ) -> Dict[str, Any]:
         """
         Analyze a page screenshot for AI-driven learning agent.
@@ -1398,7 +1557,8 @@ class AIService:
         Returns:
             dict with extracted info: category, keywords, key_features, specs_summary
         """
-        config = self._get_llm_config()
+        # Use DeepSeek for product info extraction
+        config = self._get_llm_config(model='deepseek-v3.2')
         api_key = config['api_key']
         
         if not api_key:
@@ -1504,7 +1664,8 @@ class AIService:
         Returns:
             List of dicts, each with 'question' and 'answer' keys
         """
-        config = self._get_llm_config()
+        # Use DeepSeek for Q&A generation
+        config = self._get_llm_config(model='deepseek-v3.2')
         api_key = config['api_key']
         
         if not api_key:

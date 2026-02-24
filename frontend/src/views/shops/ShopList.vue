@@ -50,6 +50,15 @@
           </template>
         </el-table-column>
         <el-table-column prop="session_count" label="会话数" width="80" align="center" />
+        <el-table-column label="自动学习" width="100" align="center">
+          <template #default="{ row }">
+            <el-switch
+              v-model="row.auto_learn_summary"
+              size="small"
+              @change="handleToggleAutoLearn(row)"
+            />
+          </template>
+        </el-table-column>
         <el-table-column prop="created_at" label="创建时间" width="180">
           <template #default="{ row }">
             {{ formatDate(row.created_at) }}
@@ -115,6 +124,10 @@
         <el-form-item label="备注/知识库">
           <el-input v-model="form.notes" type="textarea" :rows="3" placeholder="店铺专属知识库内容" />
         </el-form-item>
+        <el-form-item label="自动学习">
+          <el-switch v-model="form.auto_learn_summary" active-text="开启" inactive-text="关闭" />
+          <span style="margin-left: 10px; color: #909399; font-size: 12px;">每日自动分析对话记录并总结到知识库</span>
+        </el-form-item>
       </el-form>
       <template #footer>
         <el-button @click="dialogVisible = false">取消</el-button>
@@ -153,6 +166,7 @@ const form = reactive({
   password: '',
   login_url: '',
   notes: '',
+  auto_learn_summary: true,
 })
 
 const rules = {
@@ -183,6 +197,7 @@ const showCreateDialog = () => {
     password: '',
     login_url: '',
     notes: '',
+    auto_learn_summary: true,
   })
   dialogVisible.value = true
 }
@@ -196,6 +211,7 @@ const handleEdit = (shop) => {
     password: '',
     login_url: shop.login_url,
     notes: shop.notes,
+    auto_learn_summary: shop.auto_learn_summary !== false,
   })
   dialogVisible.value = true
 }
@@ -237,6 +253,17 @@ const handleStop = async (shop) => {
   const response = await shopsStore.stopShop(shop.shop_id)
   if (response.success) {
     ElMessage.success('店铺已停止')
+  }
+}
+
+const handleToggleAutoLearn = async (shop) => {
+  const response = await shopsStore.updateShop(shop.shop_id, {
+    auto_learn_summary: shop.auto_learn_summary,
+  })
+  if (response.success) {
+    ElMessage.success(shop.auto_learn_summary ? '已开启自动学习' : '已关闭自动学习')
+  } else {
+    shop.auto_learn_summary = !shop.auto_learn_summary
   }
 }
 

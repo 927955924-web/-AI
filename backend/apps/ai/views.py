@@ -82,12 +82,13 @@ class GenerateReplyView(APIView):
                         
                         # Analyze image with vision model
                         prompt = """请分析这张买家发送的图片，描述图片内容。
-如果是商品图片，请描述商品特征。
+如果是商品图片，请详细描述商品特征，包括图片上的所有文字标注（如型号、规格、支持的功能等）。
 如果是问题反馈图片（如损坏、质量问题），请描述具体问题。
-如果是截图或文字图片，请识别其中的文字内容。
+如果是截图或文字图片，请完整识别其中的文字内容。
+如果图片模糊或无法确定某些信息，请明确说明'无法确认'，不要猜测。
 请用简洁的中文回答。"""
                         
-                        result = service.call_vision_model(prompt, image_base64, model='qwen-vl-plus')
+                        result = service.call_vision_model(prompt, image_base64)
                         if result['success'] and result['content']:
                             # Cache the result for 7 days
                             cache.set(cache_key, result['content'], 7 * 86400)
@@ -129,12 +130,13 @@ class GenerateReplyView(APIView):
                         continue
                     
                     prompt = """请分析这个视频帧截图，描述画面内容。
-如果是商品展示，请描述商品外观和特征。
+如果是商品展示，请详细描述商品外观、特征和画面上的文字标注。
 如果是使用演示，请描述操作步骤。
 如果是问题反馈（如产品损坏），请描述具体问题。
+如果画面模糊或无法确定某些信息，请明确说明'无法确认'，不要猜测。
 请用简洁的中文回答。"""
                     
-                    result = service.call_vision_model(prompt, frame_base64, model='qwen-vl-plus')
+                    result = service.call_vision_model(prompt, frame_base64)
                     if result['success'] and result['content']:
                         cache.set(cache_key, result['content'], 7 * 86400)
                         frame_descriptions.append(f"视频{timestamp}s: {result['content']}")
@@ -164,6 +166,7 @@ class GenerateReplyView(APIView):
             model=model,
             product_names=product_names,
             product_card_ids=product_card_ids,
+            buyer_image_urls=buyer_images or [],
         )
         
         return Response({
@@ -202,7 +205,7 @@ class VisionAnalyzeView(APIView):
         - image_base64: Base64 encoded screenshot
         - page_type: 'list' or 'detail'
         - session_id: Optional session ID for tracking
-        - model: Vision model to use (default: qwen-vl-plus)
+        - model: Vision model to use (default: doubao-vision)
     
     Returns:
         - success: bool
@@ -219,7 +222,7 @@ class VisionAnalyzeView(APIView):
         image_base64 = serializer.validated_data['image_base64']
         page_type = serializer.validated_data.get('page_type', 'list')
         session_id = serializer.validated_data.get('session_id') or str(request.user.id)
-        model = serializer.validated_data.get('model', 'qwen-vl-plus')
+        model = serializer.validated_data.get('model', 'doubao-vision')
         
         # Get or create agent for this session
         agent = VisionAgentManager.get_agent(session_id, model=model)
@@ -419,7 +422,7 @@ class VisionAnalyzePageView(APIView):
         
         try:
             service = AIService()
-            result = service.call_vision_model(prompt, image_base64, model='qwen-vl-plus')
+            result = service.call_vision_model(prompt, image_base64)
             
             if not result['success']:
                 return Response({

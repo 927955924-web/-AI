@@ -10,6 +10,8 @@ from .views import (
     ProcessProductView,
     CompleteTaskView,
     ResetAllTasksView,
+    CheckProductLearnedView,
+    ResolveConflictView,
 )
 
 urlpatterns = [
@@ -19,4 +21,6 @@ urlpatterns = [
     path('process-product/', ProcessProductView.as_view(), name='learning-process-product'),
     path('complete/<str:task_id>/', CompleteTaskView.as_view(), name='learning-complete'),
     path('reset-all/', ResetAllTasksView.as_view(), name='learning-reset-all'),
+    path('check-learned/', CheckProductLearnedView.as_view(), name='learning-check-learned'),
+    path('resolve-conflict/', ResolveConflictView.as_view(), name='learning-resolve-conflict'),
 ]

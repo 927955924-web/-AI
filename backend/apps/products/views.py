@@ -25,6 +25,7 @@ class ProductViewSet(viewsets.ModelViewSet):
     
     permission_classes = [IsAuthenticated]
     lookup_field = 'product_id'
+    pagination_class = None  # 禁用分页，显示所有商品
     
     def get_queryset(self):
         user = self.request.user

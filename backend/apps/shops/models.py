@@ -57,6 +57,7 @@ class Shop(models.Model):
     config_json = models.JSONField(default=dict, blank=True, verbose_name='配置')
     notes = models.TextField(blank=True, verbose_name='备注/知识库')
     is_active = models.BooleanField(default=True, verbose_name='是否启用')
+    auto_learn_summary = models.BooleanField(default=True, verbose_name='自动学习总结')
     last_login = models.DateTimeField(null=True, blank=True, verbose_name='最后登录')
     created_at = models.DateTimeField(auto_now_add=True, verbose_name='创建时间')
     updated_at = models.DateTimeField(auto_now=True, verbose_name='更新时间')

@@ -271,11 +271,13 @@ class VisionAgentManager:
         
         for qa in qa_pairs:
             try:
+                from apps.knowledge.utils import infer_shop_id
+                resolved_shop_id = infer_shop_id(owner_id=owner_id, shop_id=shop_id)
                 KnowledgeBase.objects.create(
                     question=qa['question'],
                     answer=qa['answer'],
                     is_correct=True,  # AI-generated, mark as correct
-                    shop_id=shop_id,
+                    shop_id=resolved_shop_id,
                     owner_id=owner_id,
                     source='ai_generated',
                     keywords=product_data.get('name', '')[:100]

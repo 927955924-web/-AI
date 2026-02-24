@@ -15,12 +15,14 @@ function logToMain(message, level = 'info') {
 
 // State management
 const state = {
+  shopId: null,                  // Shop ID for this BrowserView (set by main process)
   processedMessages: new Set(),  // Track processed message hashes
   repliedConversations: new Map(), // Track replied conversations: customerId -> lastReplyTime
   lastCustomerMessages: new Map(), // Track last message per customer: customerId -> messageHash
   sentMessages: new Set(),       // Track messages we sent (to avoid processing our own replies)
   isProcessing: false,           // Prevent concurrent processing
   isReplying: false,             // Prevent concurrent replies from processCurrentConversation
+  replyingStartTime: 0,         // Timestamp when isReplying was set to true (safety timeout)
   observerActive: false,
   scanInterval: null,
   lastScanTime: 0,
@@ -30,8 +32,18 @@ const state = {
   consecutiveNoUnread: 0,  // Track consecutive times no unread found after Shift+Tab
   consecutiveShiftTab: 0,  // Track consecutive Shift+Tab presses to prevent infinite loop
   consecutiveNoMessage: 0,  // Track conversations with no real buyer message
-  visitedTimeoutConvs: new Set()  // Track timeout conversations we've already checked (no real msg)
+  visitedTimeoutConvs: new Set(),  // Track timeout conversations we've already checked (no real msg)
+  // Human action detection - pause auto-reply when human is operating
+  lastHumanActionTime: 0,        // Timestamp of last human action (keyboard/mouse)
+  humanActionGracePeriod: 5000,  // Wait 5 seconds after human action before resuming auto-reply
+  humanActionListenersActive: false  // Track if human action listeners are set up
 };
+
+// Listen for shop context from main process (so we know which shop this BrowserView belongs to)
+ipcRenderer.on('shop:set-context', (event, data) => {
+  state.shopId = data.shopId;
+  logToMain(`Shop context set: shopId=${data.shopId}`);
+});
 
 /**
  * Generate a simple hash for deduplication
@@ -70,6 +82,106 @@ function isElementVisible(el) {
   const style = window.getComputedStyle(el);
   if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
   return true;
+}
+
+/**
+ * Record human action timestamp - called when keyboard/mouse events detected
+ */
+function recordHumanAction(eventType) {
+  state.lastHumanActionTime = Date.now();
+  console.log(`[PDD][HumanAction] Detected human action: ${eventType}, pausing auto-reply for ${state.humanActionGracePeriod/1000}s`);
+}
+
+/**
+ * Check if auto-reply should be paused due to recent human action
+ * Returns true if human was active within grace period (should pause)
+ */
+function shouldPauseForHumanAction() {
+  if (state.lastHumanActionTime === 0) return false;
+  
+  const timeSinceHumanAction = Date.now() - state.lastHumanActionTime;
+  if (timeSinceHumanAction < state.humanActionGracePeriod) {
+    const remainingWait = Math.ceil((state.humanActionGracePeriod - timeSinceHumanAction) / 1000);
+    console.log(`[PDD][HumanAction] Human action detected ${Math.round(timeSinceHumanAction/1000)}s ago, waiting ${remainingWait}s more before auto-reply`);
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Set up event listeners to detect human actions (keyboard/mouse)
+ * Only captures events in the chat input area to avoid false positives
+ */
+function setupHumanActionListeners() {
+  if (state.humanActionListenersActive) return;
+  state.humanActionListenersActive = true;
+  
+  console.log('[PDD][HumanAction] Setting up human action detection listeners...');
+  
+  // Keyboard events - detect typing in input area
+  document.addEventListener('keydown', (e) => {
+    // Only record if the target is an input/textarea (user typing)
+    const target = e.target;
+    const tagName = target.tagName.toLowerCase();
+    const isEditable = target.getAttribute('contenteditable') === 'true';
+    
+    if (tagName === 'input' || tagName === 'textarea' || isEditable) {
+      // Ignore system keys (Shift+Tab is used for auto-switching)
+      if (e.key === 'Tab' && e.shiftKey) return;
+      if (e.key === 'Enter' && !e.shiftKey) return; // Enter alone might be auto-send
+      
+      recordHumanAction('keyboard:' + e.key);
+    }
+  }, true);
+  
+  // Mouse click events in chat area - detect manual conversation switching or clicking
+  document.addEventListener('click', (e) => {
+    const target = e.target;
+    
+    // Check if click is on conversation list items (manual switching)
+    const chatListItem = target.closest('.chat-list, [class*="session-item"], [class*="conversation-item"], [class*="chat-item"]');
+    if (chatListItem) {
+      recordHumanAction('click:conversation-switch');
+      return;
+    }
+    
+    // Check if click is on input area (focusing to type)
+    const inputArea = target.closest('textarea, input, [contenteditable="true"]');
+    if (inputArea) {
+      recordHumanAction('click:input-focus');
+      return;
+    }
+    
+    // Check if click is on send button (manual send)
+    const sendBtn = target.closest('[class*="send-btn"], [class*="sendBtn"], button');
+    if (sendBtn) {
+      const text = sendBtn.textContent || '';
+      if (text.includes('发送') || text === 'Send') {
+        recordHumanAction('click:send-button');
+        return;
+      }
+    }
+  }, true);
+  
+  // Input events - detect direct text input (catches paste, voice input, etc.)
+  document.addEventListener('input', (e) => {
+    const target = e.target;
+    const tagName = target.tagName.toLowerCase();
+    const isEditable = target.getAttribute('contenteditable') === 'true';
+    
+    if (tagName === 'input' || tagName === 'textarea' || isEditable) {
+      // Check if this input is from our auto-reply (sentMessages tracking)
+      // We mark our sent messages, so if this appears to be a new manual input, record it
+      const inputValue = target.value || target.innerText || '';
+      if (inputValue.length > 0) {
+        // Only record if it looks like manual input (not automated)
+        // Our sendMessage function uses direct value setting, which may not trigger this
+        recordHumanAction('input:text-change');
+      }
+    }
+  }, true);
+  
+  console.log('[PDD][HumanAction] Human action listeners active');
 }
 
 function findElements(strategies) {
@@ -312,39 +424,44 @@ function getLastCustomerMessage() {
     const item = messageItems[i];
     const text = item.textContent.trim();
 
-    // Skip empty or very short items
-    if (text.length < 2) continue;
+    // Skip truly empty elements (no text AND no media)
+    if (text.length < 2) {
+      const hasMedia = item.querySelector('img[src*="http"], video, [class*="image"], [class*="video"], [class*="img"]');
+      if (!hasMedia) continue;
+    }
 
     // Check if it's a customer message (not from merchant/self)
     const isCustomer = isCustomerMessage(item);
     if (isCustomer) {
       // Extract just the message text (exclude timestamps, names, etc.)
       const msgText = extractMessageText(item);
-      if (msgText && msgText.length > 0) {
-        // Check if this is a message WE sent (avoid processing our own replies)
-        const msgHash = hashMessage(msgText);
-        if (state.sentMessages.has(msgHash)) {
-          console.log('[PDD] Skipping our own sent message:', msgText.substring(0, 30));
-          continue;
-        }
-        
-        // Check if this is a PDD system/robot message (NOT a real buyer message)
-        if (isPddSystemMessage(msgText)) {
-          console.log('[PDD] Skipping PDD system/robot message:', msgText.substring(0, 50));
-          continue;
-        }
-        
-        // Check if this is just a product link/card (skip it to find real question)
-        if (isProductLinkOnly(msgText)) {
-          console.log('[PDD] Skipping product link, looking for real question...');
-          continue;
-        }
-        
-        return {
-          text: msgText,
-          element: item
-        };
+      
+      // For image-only messages, use "[图片]" as placeholder text
+      const effectiveText = (msgText && msgText.length > 0) ? msgText : '[图片]';
+      
+      // Check if this is a message WE sent (avoid processing our own replies)
+      const msgHash = hashMessage(effectiveText);
+      if (state.sentMessages.has(msgHash)) {
+        console.log('[PDD] Skipping our own sent message:', effectiveText.substring(0, 30));
+        continue;
       }
+      
+      // Check if this is a PDD system/robot message (NOT a real buyer message)
+      if (effectiveText !== '[图片]' && isPddSystemMessage(effectiveText)) {
+        console.log('[PDD] Skipping PDD system/robot message:', effectiveText.substring(0, 50));
+        continue;
+      }
+      
+      // Check if this is just a product link/card (skip it to find real question)
+      if (effectiveText !== '[图片]' && isProductLinkOnly(effectiveText)) {
+        console.log('[PDD] Skipping product link, looking for real question...');
+        continue;
+      }
+      
+      return {
+        text: effectiveText,
+        element: item
+      };
     }
   }
 
@@ -406,6 +523,120 @@ function isPddSystemMessage(text) {
   }
   
   return false;
+}
+
+/**
+ * Check if message is PDD's official auto-reply from their robot
+ * These are automated responses from PDD's platform robot (not human merchant)
+ * When the last message is official auto-reply, the timeout status won't clear
+ */
+function isPddOfficialAutoReply(text) {
+  if (!text) return false;
+  
+  // PDD official robot auto-reply patterns
+  const officialAutoReplyPatterns = [
+    // Common greeting auto-replies
+    '亲，很高兴为您服务',
+    '请问您要查询什么问题',
+    '请问有什么可以帮您',
+    '有什么可以帮到您',
+    '您好，欢迎光临',
+    // Order/shipping auto-replies
+    '拼单成功后我们将会尽快发货',
+    '请您耐心等待',
+    '我们会尽快为您安排',
+    '正在为您处理',
+    // Common templated responses
+    '感谢您的支持',
+    '祝您购物愉快',
+    '如有问题请随时联系',
+    // Robot greeting patterns
+    '我是智能客服',
+    '我是机器人',
+    '智能助手为您服务',
+  ];
+  
+  for (const pattern of officialAutoReplyPatterns) {
+    if (text.includes(pattern)) {
+      return true;
+    }
+  }
+  
+  return false;
+}
+
+/**
+ * Check if the last message in current chat is from PDD official auto-reply robot
+ * Returns the message text if it is, null otherwise
+ */
+function getLastOfficialAutoReplyMessage() {
+  const messageSelectors = [
+    '[class*="msg-item"]',
+    '[class*="message-item"]',
+    '[class*="chat-msg"]',
+    '[class*="bubble"]',
+    '[class*="msg-row"]',
+    '[class*="message-row"]'
+  ];
+
+  let messageItems = [];
+  for (const selector of messageSelectors) {
+    const items = document.querySelectorAll(selector);
+    if (items.length > 0) {
+      messageItems = Array.from(items);
+      break;
+    }
+  }
+
+  if (messageItems.length === 0) {
+    const chatArea = findElement([
+      '[class*="chat-content"]',
+      '[class*="message-list"]',
+      '[class*="msg-list"]',
+      '[class*="chat-body"]',
+      '[class*="im-content"]',
+      '[class*="chat-record"]'
+    ]);
+    if (chatArea) {
+      messageItems = Array.from(chatArea.children);
+    }
+  }
+
+  if (messageItems.length === 0) return null;
+
+  // Check the last few messages (official auto-reply might not be the very last)
+  for (let i = messageItems.length - 1; i >= Math.max(0, messageItems.length - 3); i--) {
+    const item = messageItems[i];
+    const text = extractMessageText(item);
+    
+    if (!text || text.length < 2) continue;
+    
+    // Check if it's NOT a customer message (i.e., from merchant side)
+    if (!isCustomerMessage(item)) {
+      // Check if it's official auto-reply
+      if (isPddOfficialAutoReply(text)) {
+        console.log('[PDD] Detected official auto-reply:', text.substring(0, 50));
+        return text;
+      }
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Send a handshake emoji to clear the timeout/countdown status
+ * This is used when official auto-reply has responded but timeout still shows
+ */
+async function sendHandshakeToClearTimeout() {
+  console.log('[PDD] Sending handshake emoji to clear timeout status...');
+  const success = await sendMessage('🤝');
+  if (success) {
+    console.log('[PDD] Handshake sent successfully to clear timeout');
+  } else {
+    console.warn('[PDD] Failed to send handshake emoji');
+  }
+  return success;
 }
 
 /**
@@ -485,37 +716,60 @@ function collectConversationContext() {
  */
 function isCustomerMessage(el) {
   const className = (el.className || '').toLowerCase();
-  const html = el.outerHTML.toLowerCase();
-  const text = el.textContent || '';
+  const classNameOrig = el.className || '';
 
-  // Check for merchant/self indicators in the message content
-  // Pinduoduo shows "主账号" label next to merchant messages
-  if (text.includes('主账号') || text.includes('客服') || text.includes('商家')) {
-    return false;
+  // Check for merchant/self indicators using LABEL elements only (not full message text)
+  // PDD shows "主账号" as a label/tag next to merchant messages, not inside the message bubble
+  const labelEls = el.querySelectorAll('[class*="name"], [class*="label"], [class*="tag"], [class*="nick"], [class*="title"], [class*="Name"], [class*="Label"]');
+  for (const label of labelEls) {
+    const labelText = (label.textContent || '').trim();
+    // Only check short label elements (real labels are short, not message content)
+    if (labelText.length <= 20) {
+      if (labelText.includes('主账号') || labelText === '客服' || labelText === '商家' || 
+          labelText.includes('子账号') || labelText.includes('店铺')) {
+        return false;
+      }
+    }
   }
 
-  // Positive indicators for customer/buyer messages
+  // Positive indicators for customer/buyer messages (case-insensitive)
   if (className.includes('left') || className.includes('buyer') ||
       className.includes('customer') || className.includes('other') ||
-      className.includes('receive') || className.includes('incoming')) {
+      className.includes('receive') || className.includes('incoming') ||
+      className.includes('peer') || className.includes('remote')) {
+    return true;
+  }
+  
+  // Check original className for camelCase patterns (PDD uses these)
+  if (/Left|Buyer|Customer|Other|Receive|Incoming|Peer|Remote/i.test(classNameOrig)) {
     return true;
   }
 
   // Negative indicators for self/merchant messages
   if (className.includes('right') || className.includes('self') ||
       className.includes('merchant') || className.includes('mine') ||
-      className.includes('send') || className.includes('outgoing')) {
+      className.includes('send') || className.includes('outgoing') ||
+      className.includes('local') || className.includes('owner')) {
+    return false;
+  }
+  
+  // Check original className for camelCase patterns
+  if (/Right|Self|Merchant|Mine|Send|Outgoing|Local|Owner/i.test(classNameOrig)) {
     return false;
   }
 
   // Check for avatar or name indicator on the right side (merchant)
-  const avatar = el.querySelector('[class*="avatar"], img');
+  const avatar = el.querySelector('[class*="avatar"], [class*="Avatar"]');
   if (avatar) {
     const avatarRect = avatar.getBoundingClientRect();
     const elRect = el.getBoundingClientRect();
     // If avatar is on the right side, it's merchant message
     if (avatarRect.left > elRect.left + elRect.width * 0.5) {
       return false;
+    }
+    // If avatar is on the left side, it's buyer message
+    if (avatarRect.left < elRect.left + elRect.width * 0.3) {
+      return true;
     }
   }
 
@@ -529,7 +783,7 @@ function isCustomerMessage(el) {
   // If element takes most of the width, check inner content alignment
   if (elWidth > parentWidth * 0.8) {
     // Look for inner bubble/content element
-    const bubble = el.querySelector('[class*="bubble"], [class*="content"], [class*="text"]');
+    const bubble = el.querySelector('[class*="bubble"], [class*="content"], [class*="text"], [class*="Bubble"], [class*="Content"]');
     if (bubble) {
       const bubbleRect = bubble.getBoundingClientRect();
       const bubbleRelX = bubbleRect.left - parentRect.left;
@@ -545,7 +799,8 @@ function isCustomerMessage(el) {
   // If positioned in the right half, likely a merchant message
   if (relativeX > parentWidth * 0.5) return false;
 
-  return false;
+  // Default: assume it could be a buyer message to be inclusive
+  return true;
 }
 
 /**
@@ -635,8 +890,8 @@ function getCurrentCustomerName() {
         const nameEl = selectedItem.querySelector('[class*="nick"], [class*="name"], .chat-list-name, .visitor-name');
         if (nameEl && nameEl.textContent.trim()) {
           const name = nameEl.textContent.trim();
-          // Filter out system labels
-          if (name && !['主账号', '客服', '商家', '已超时', '收藏会话', '游客'].includes(name)) {
+          // Filter out system labels and merchant indicators
+          if (name && !['主账号', '客服', '商家', '已超时', '收藏会话', '游客'].includes(name) && !name.includes('主账号')) {
             logToMain(`Found customer name from PDD chat-list: ${name}`);
             return name;
           }
@@ -692,8 +947,8 @@ function getCurrentCustomerName() {
       const el = document.querySelector(selector);
       if (el && el.textContent.trim() && el.textContent.trim().length > 0) {
         const name = el.textContent.trim();
-        // Skip if it looks like a generic label
-        if (!['聊天', '会话', '客服', '商家'].includes(name)) {
+        // Skip if it looks like a generic label or merchant indicator
+        if (!['聊天', '会话', '客服', '商家', '主账号'].includes(name) && !name.includes('主账号')) {
           console.log(`[PDD] Found customer name from header: ${name}`);
           return name;
         }
@@ -723,7 +978,8 @@ function getCurrentCustomerName() {
         const nameEl = selectedItem.querySelector('[class*="name"], [class*="nick"], [class*="title"]');
         if (nameEl && nameEl.textContent.trim()) {
           const name = nameEl.textContent.trim();
-          if (name.length > 0 && !['聊天', '会话'].includes(name)) {
+          // Skip merchant labels and generic names
+          if (name.length > 0 && !['聊天', '会话', '客服', '商家', '主账号'].includes(name) && !name.includes('主账号')) {
             console.log(`[PDD] Found customer name from active item: ${name}`);
             return name;
           }
@@ -775,7 +1031,8 @@ function getCurrentCustomerName() {
           const senderEl = msg.querySelector('[class*="sender"], [class*="nick"], [class*="name"], [class*="avatar"]');
           if (senderEl) {
             const title = senderEl.getAttribute('title') || senderEl.getAttribute('alt');
-            if (title && title.length > 0) {
+            // Skip merchant labels
+            if (title && title.length > 0 && !['主账号', '客服', '商家'].includes(title) && !title.includes('主账号')) {
               console.log(`[PDD] Found customer name from message: ${title}`);
               return title;
             }
@@ -1051,7 +1308,13 @@ function isLastMessageFromMerchant() {
   for (let i = messageItems.length - 1; i >= 0; i--) {
     const item = messageItems[i];
     const text = extractMessageText(item);
-    if (!text || text.length < 2) continue;
+    
+    // Skip truly empty elements (no text AND no images/videos)
+    if ((!text || text.length < 2)) {
+      // But if it has images or videos, it's a real message - don't skip
+      const hasMedia = item.querySelector('img[src*="http"], video, [class*="image"], [class*="video"], [class*="img"]');
+      if (!hasMedia) continue;
+    }
 
     // If last meaningful message is NOT from customer, it's from us
     return !isCustomerMessage(item);
@@ -1064,15 +1327,25 @@ function isLastMessageFromMerchant() {
  * Process current active conversation - check and reply
  */
 async function processCurrentConversation() {
-  // Prevent concurrent calls
-  if (state.isReplying) {
-    console.log('[PDD] Already replying, skipping concurrent call');
+  // Check for human action - pause auto-reply if human is operating
+  if (shouldPauseForHumanAction()) {
     return false;
+  }
+  
+  // Prevent concurrent calls - with safety timeout to prevent permanent lock
+  if (state.isReplying) {
+    const lockDuration = Date.now() - state.replyingStartTime;
+    if (lockDuration > 30000) {
+      // Lock has been held for over 30 seconds - force release (something went wrong)
+      console.warn(`[PDD] isReplying lock stuck for ${Math.round(lockDuration/1000)}s, force releasing`);
+      state.isReplying = false;
+    } else {
+      return false;
+    }
   }
   
   // Skip if the last message is from us (already replied, buyer hasn't sent new message)
   if (isLastMessageFromMerchant()) {
-    console.log('[PDD] Last message is from merchant, skipping - waiting for new buyer message');
     return false;
   }
 
@@ -1105,6 +1378,7 @@ async function processCurrentConversation() {
 
   // Set lock before processing
   state.isReplying = true;
+  state.replyingStartTime = Date.now();
 
   try {
     // Mark as processed
@@ -1190,6 +1464,11 @@ async function processCurrentConversation() {
  * Scan and process all unread conversations
  */
 async function scanUnreadConversations() {
+  // Check for human action - pause auto-reply if human is operating
+  if (shouldPauseForHumanAction()) {
+    return;
+  }
+  
   if (state.isProcessing) return;
   state.isProcessing = true;
 
@@ -1209,7 +1488,16 @@ async function scanUnreadConversations() {
 
       // Check if last message is from merchant (already replied)
       if (isLastMessageFromMerchant()) {
-        console.log('[PDD] This conversation already has merchant reply as last message, skipping');
+        // Check if the last message is official auto-reply (not human reply)
+        // If so, the timeout status won't clear - we need to send handshake to clear it
+        const officialAutoReply = getLastOfficialAutoReplyMessage();
+        if (officialAutoReply) {
+          console.log('[PDD] Timeout conversation has official auto-reply, sending handshake to clear status...');
+          await sendHandshakeToClearTimeout();
+          await new Promise(r => setTimeout(r, 1000));
+        } else {
+          console.log('[PDD] This conversation already has merchant reply as last message, skipping');
+        }
         await new Promise(r => setTimeout(r, 300));
         continue;
       }
@@ -1298,6 +1586,15 @@ function startMonitoring() {
 
   console.log('[PDD] Starting message monitoring...');
 
+  // Notify main process that login is successful (monitoring = on chat page = logged in)
+  ipcRenderer.send('platform:login-success', { 
+    platformId: PLATFORM_ID,
+    shopId: state.shopId
+  });
+
+  // Set up human action detection listeners
+  setupHumanActionListeners();
+
   // Initialize: only mark already-replied conversations as processed
   initializeExistingMessages();
 
@@ -1354,6 +1651,11 @@ function startMonitoring() {
   ]) || document.body;
 
   const observer = new MutationObserver((mutations) => {
+    // Skip if human is operating
+    if (shouldPauseForHumanAction()) {
+      return;
+    }
+    
     let hasNewContent = false;
     for (const mutation of mutations) {
       if (mutation.addedNodes.length > 0) {
@@ -1373,6 +1675,11 @@ function startMonitoring() {
 
   // 5. Periodic check for new messages - use Shift+Tab to switch (every 5 seconds, with cooldown)
   state.scanInterval = setInterval(() => {
+    // Skip if human is operating
+    if (shouldPauseForHumanAction()) {
+      return;
+    }
+    
     if (!state.isProcessing) {
       const now = Date.now();
       
@@ -1406,6 +1713,11 @@ function startMonitoring() {
 
   // 6. Periodic check on current conversation (every 2 seconds)
   setInterval(() => {
+    // Skip if human is operating
+    if (shouldPauseForHumanAction()) {
+      return;
+    }
+    
     if (!state.isProcessing) {
       processCurrentConversation();
     }
@@ -1696,12 +2008,82 @@ function extractProductFromElement(el) {
  * Check if an image element is a content image (not emoji/icon/avatar)
  */
 function isContentImage(img) {
-  if (img.naturalWidth > 0 && img.naturalWidth <= 50) return false;
-  if (img.naturalHeight > 0 && img.naturalHeight <= 50) return false;
   const src = img.src || '';
-  if (/emoji|icon|avatar|head|logo|badge|sticker/i.test(src)) return false;
-  if (/emoji|icon|avatar|head|logo|badge|sticker/i.test(img.className || '')) return false;
+  
+  // Must have a valid src
+  if (!src || src.startsWith('data:image/svg') || src.startsWith('data:image/gif;base64,R0lGOD')) {
+    return false;
+  }
+  
+  // Skip common non-content image patterns
+  if (/emoji|icon|avatar|head_img|logo|badge|sticker|loading|placeholder|spinner/i.test(src)) {
+    return false;
+  }
+  if (/emoji|icon|avatar|head|logo|badge|sticker/i.test(img.className || '')) {
+    return false;
+  }
+  
+  // Check dimensions - be more lenient for lazy-loaded images
+  const w = img.naturalWidth || img.width || 0;
+  const h = img.naturalHeight || img.height || 0;
+  const rect = img.getBoundingClientRect();
+  
+  // Skip tiny images (emoji/icons) - but only if we have reliable dimension info
+  if (w > 0 && w <= 30 && h > 0 && h <= 30) return false;
+  if (rect.width > 0 && rect.width < 30 && rect.height > 0 && rect.height < 30) return false;
+  
+  // If image is from PDD CDN, it's likely a content image regardless of size
+  if (/pddpic|pinduoduo|yangkeduo|t00img/i.test(src)) {
+    return true;
+  }
+  
+  // For other images, require reasonable displayed size
+  if (rect.width > 0 && rect.width < 40) return false;
+  
   return true;
+}
+
+/**
+ * Check if an image is inside a product card, order card, or link card.
+ * These should NOT be clicked (clicking navigates away from chat page).
+ */
+function isCardOrLinkImage(img) {
+  // Check if img is inside a link (a tag) pointing to a product/order page
+  const parentLink = img.closest('a[href]');
+  if (parentLink) {
+    const href = parentLink.href || '';
+    if (/goods|product|item|order|detail|shop/i.test(href)) return true;
+  }
+  
+  // Check parent containers for card/link/order/product indicators
+  let el = img.parentElement;
+  for (let depth = 0; el && depth < 6; depth++, el = el.parentElement) {
+    const cls = (el.className || '').toLowerCase();
+    const tagName = el.tagName || '';
+    
+    // Product card / order card / goods card patterns
+    if (/product[-_]?card|goods[-_]?card|order[-_]?card|commodity|sku[-_]?card/i.test(cls)) return true;
+    if (/card.*link|link.*card|msg[-_]?card|chat[-_]?card/i.test(cls)) return true;
+    if (/goods[-_]?info|product[-_]?info|order[-_]?info/i.test(cls)) return true;
+    if (/goods[-_]?msg|product[-_]?msg|order[-_]?msg/i.test(cls)) return true;
+    
+    // If the container has price text (¥) alongside the image, it's a product card
+    if (el.textContent && /[¥￥]\s*\d/.test(el.textContent)) {
+      // But only if the text is short (card-like), not a full message
+      const textLen = el.textContent.replace(/\s/g, '').length;
+      if (textLen < 200) return true;
+    }
+    
+    // If parent is a link tag with navigation href, it's likely a clickable card
+    if (tagName === 'A') {
+      const href = (el.href || '').toLowerCase();
+      // Only filter out links that navigate to product/order pages, not preview links
+      if (href && /goods|product|item|order|detail|shop|mall\.pinduoduo/i.test(href)) return true;
+      // Links with no href or blob/javascript/# are usually preview triggers, not navigation
+    }
+  }
+  
+  return false;
 }
 
 /**
@@ -1709,13 +2091,21 @@ function isContentImage(img) {
  */
 function extractChatImages() {
   const images = [];
+  
+  console.log('[PDD][Vision] ========== Starting image extraction ==========');
+  
+  // Find message containers - try PDD-specific then generic
   const messageSelectors = [
     '[class*="msg-item"]',
     '[class*="message-item"]',
     '[class*="chat-msg"]',
-    '[class*="bubble"]',
+    '[class*="im-message"]',
     '[class*="msg-row"]',
-    '[class*="message-row"]'
+    '[class*="message-row"]',
+    '[class*="MsgItem"]',      // PDD uses camelCase sometimes
+    '[class*="MessageItem"]',
+    '[class*="chatItem"]',
+    '[class*="msgContent"]'
   ];
 
   let messageItems = [];
@@ -1723,40 +2113,126 @@ function extractChatImages() {
     const items = document.querySelectorAll(selector);
     if (items.length > 0) {
       messageItems = Array.from(items);
+      console.log(`[PDD][Vision] Found ${items.length} message items with selector: ${selector}`);
       break;
     }
   }
 
-  // Scan last 5 messages for buyer-sent images
-  const recentItems = messageItems.slice(-5);
+  // Fallback: find chat area and get direct children
+  if (messageItems.length === 0) {
+    const chatAreaSelectors = [
+      '[class*="chat-content"]',
+      '[class*="message-list"]',
+      '[class*="msg-list"]',
+      '[class*="chat-body"]',
+      '[class*="im-content"]',
+      '[class*="chat-record"]',
+      '[class*="ChatContent"]',
+      '[class*="MessageList"]',
+      '[class*="chatList"]',
+      '[class*="msgList"]'
+    ];
+    for (const selector of chatAreaSelectors) {
+      const chatArea = document.querySelector(selector);
+      if (chatArea && chatArea.children.length > 0) {
+        messageItems = Array.from(chatArea.children);
+        console.log(`[PDD][Vision] Fallback: found ${messageItems.length} children with selector: ${selector}`);
+        break;
+      }
+    }
+  }
+
+  // Final fallback: scan all images in chat area directly
+  if (messageItems.length === 0) {
+    console.log('[PDD][Vision] No message containers found, scanning all images in document...');
+    // Try to find images in the main chat area
+    const allImages = document.querySelectorAll('img[src*="pddpic"], img[src*="pinduoduo"], img[src*="yangkeduo"]');
+    console.log(`[PDD][Vision] Found ${allImages.length} PDD-hosted images`);
+    for (const img of allImages) {
+      if (!isContentImage(img)) continue;
+      if (isCardOrLinkImage(img)) continue;
+      let url = img.src || '';
+      if (url && url.startsWith('http') && !images.includes(url)) {
+        // Check if this image is likely from buyer (not in sidebar/header)
+        const rect = img.getBoundingClientRect();
+        if (rect.width >= 50 && rect.height >= 50) {
+          images.push(url);
+          console.log(`[PDD][Vision] Direct scan found image: ${url.substring(0, 80)}...`);
+          if (images.length >= 3) break;
+        }
+      }
+    }
+    return images;
+  }
+
+  console.log(`[PDD][Vision] Processing ${messageItems.length} message items, checking last 8...`);
+
+  // Scan last 8 messages for buyer-sent images
+  const recentItems = messageItems.slice(-8);
+  let buyerMsgCount = 0;
+  let totalImgCount = 0;
+  
   for (const item of recentItems) {
-    if (!isCustomerMessage(item)) continue;
+    const isBuyer = isCustomerMessage(item);
+    const itemClass = (item.className || '').substring(0, 60);
+    
+    if (!isBuyer) {
+      console.log(`[PDD][Vision] Skipping merchant message: ${itemClass}`);
+      continue;
+    }
+    
+    buyerMsgCount++;
+    console.log(`[PDD][Vision] Checking buyer message: ${itemClass}`);
 
     const imgs = item.querySelectorAll('img[src]');
+    totalImgCount += imgs.length;
+    console.log(`[PDD][Vision] Found ${imgs.length} images in this message`);
+    
     for (const img of imgs) {
-      if (!isContentImage(img)) continue;
-
       const src = img.src || '';
-      const url = src.startsWith('http') ? src : new URL(src, window.location.href).href;
+      const isContent = isContentImage(img);
+      const isCard = isCardOrLinkImage(img);
+      
+      if (!isContent) {
+        console.log(`[PDD][Vision] Skipping non-content image (icon/emoji): ${src.substring(0, 50)}...`);
+        continue;
+      }
+      if (isCard) {
+        console.log(`[PDD][Vision] Skipping card/link image: ${src.substring(0, 60)}...`);
+        continue;
+      }
+
+      let url = src;
+      if (!url.startsWith('http')) {
+        try { url = new URL(url, window.location.href).href; } catch(e) { continue; }
+      }
       if (url && !images.includes(url)) {
         images.push(url);
+        console.log(`[PDD][Vision] ✓ Found buyer image thumbnail: ${url.substring(0, 80)}...`);
       }
     }
     if (images.length >= 3) break;
   }
 
+  console.log(`[PDD][Vision] Summary: ${buyerMsgCount} buyer messages, ${totalImgCount} total images, ${images.length} extracted`);
+  
+  if (images.length === 0) {
+    console.log('[PDD][Vision] No buyer images found in recent messages');
+  }
   return images;
 }
 
 /**
  * Click image thumbnails in chat to open preview and get high-res URLs
+ * PRIMARY method: Click to open preview (simulates human viewing)
+ * FALLBACK: Clean URL parameters if click fails
  */
 async function getHighResImages() {
   const messageSelectors = [
     '[class*="msg-item"]',
     '[class*="message-item"]',
     '[class*="chat-msg"]',
-    '[class*="bubble"]',
+    '[class*="im-message"]',
     '[class*="msg-row"]',
     '[class*="message-row"]'
   ];
@@ -1770,86 +2246,191 @@ async function getHighResImages() {
     }
   }
 
-  const highResUrls = [];
-  const recentItems = messageItems.slice(-5);
+  // Fallback: chat area children
+  if (messageItems.length === 0) {
+    const chatArea = document.querySelector(
+      '[class*="chat-content"], [class*="message-list"], [class*="msg-list"], [class*="chat-body"], [class*="im-content"], [class*="chat-record"]'
+    );
+    if (chatArea) {
+      messageItems = Array.from(chatArea.children);
+    }
+  }
 
+  const highResUrls = [];
+  const recentItems = messageItems.slice(-8);
+
+  console.log('[PDD][Vision] Starting image extraction with click-to-preview...');
+
+  // PRIMARY: Try click-to-preview for all buyer images (simulates human viewing)
   for (const item of recentItems) {
     if (!isCustomerMessage(item)) continue;
 
     const imgs = item.querySelectorAll('img[src]');
     for (const img of imgs) {
       if (!isContentImage(img)) continue;
+      if (isCardOrLinkImage(img)) {
+        console.log(`[PDD][Vision] Skipping card/link image: ${(img.src || '').substring(0, 60)}...`);
+        continue;
+      }
       if (highResUrls.length >= 3) break;
 
       try {
-        // Click thumbnail to open preview
+        const thumbnailUrl = img.src || '';
+        if (!thumbnailUrl.startsWith('http')) continue;
+
+        console.log(`[PDD][Vision] Clicking image to open preview: ${thumbnailUrl.substring(0, 60)}...`);
+        
+        // Click thumbnail to open preview (simulates human action)
         img.click();
-        await new Promise(r => setTimeout(r, 800));
-
-        // Try to find the high-res preview image
-        const previewSelectors = [
-          'img[class*="preview"]',
-          'img[class*="fullscreen"]',
-          '.image-preview img',
-          '.ant-image-preview img',
-          '[class*="ImagePreview"] img',
-          '[class*="image-viewer"] img',
-          '[class*="modal"] img[src*="http"]'
-        ];
-
+        
+        // Wait for preview modal to appear
         let previewImg = null;
-        for (const sel of previewSelectors) {
-          previewImg = document.querySelector(sel);
-          if (previewImg && previewImg.src && previewImg.src !== img.src) break;
-          previewImg = null;
-        }
+        for (let attempt = 0; attempt < 8; attempt++) {
+          await new Promise(r => setTimeout(r, 400));
+          
+          // PDD-specific and generic preview selectors
+          const previewSelectors = [
+            '[class*="image-preview"] img',
+            '[class*="img-preview"] img',
+            '[class*="ImgPreview"] img',
+            '[class*="ImagePreview"] img',
+            '[class*="image-viewer"] img',
+            '[class*="ImgViewer"] img',
+            '[class*="preview-wrap"] img',
+            '[class*="pdd-img-view"] img',
+            '[class*="photo-viewer"] img',
+            '[class*="PhotoViewer"] img',
+            '.ant-image-preview-img',
+            '.ant-image-preview img',
+            'img[class*="preview"]',
+            'img[class*="fullscreen"]',
+            '[class*="modal"] img[src*="http"]',
+            '[class*="overlay"] img[src*="http"]',
+            '[class*="mask"] img[src*="http"]',
+            '[class*="layer"] img[src*="http"]',
+          ];
 
-        if (previewImg && previewImg.src) {
-          // Remove resize/quality parameters to get original image
-          let highResUrl = previewImg.src;
-          highResUrl = highResUrl.replace(/[?&]x-oss-process=[^&]*/g, '');
-          highResUrl = highResUrl.replace(/[?&]imageView2[^&]*/g, '');
-          if (!highResUrls.includes(highResUrl)) {
-            highResUrls.push(highResUrl);
-            console.log(`[PDD][Vision] Got high-res image: ${highResUrl.substring(0, 80)}...`);
+          for (const sel of previewSelectors) {
+            const candidate = document.querySelector(sel);
+            if (candidate && candidate.src && candidate.src.startsWith('http')) {
+              const candidateRect = candidate.getBoundingClientRect();
+              // Must be larger than thumbnail OR different URL
+              if (candidate.src !== thumbnailUrl || candidateRect.width > 300) {
+                previewImg = candidate;
+                break;
+              }
+            }
           }
-        } else {
-          // Fallback: use the thumbnail URL with quality upgrade
-          let fallbackUrl = img.src;
-          fallbackUrl = fallbackUrl.replace(/[?&]x-oss-process=[^&]*/g, '');
-          fallbackUrl = fallbackUrl.replace(/[?&]imageView2[^&]*/g, '');
-          if (!highResUrls.includes(fallbackUrl)) {
-            highResUrls.push(fallbackUrl);
-            console.log(`[PDD][Vision] Using fallback image: ${fallbackUrl.substring(0, 80)}...`);
+          
+          // Also search for any large image that appeared in overlay/modal
+          if (!previewImg) {
+            const allImgs = document.querySelectorAll('img[src*="http"]');
+            for (const candidate of allImgs) {
+              const rect = candidate.getBoundingClientRect();
+              if (rect.width > 300 && rect.height > 200) {
+                const style = window.getComputedStyle(candidate.parentElement || candidate);
+                const zIndex = parseInt(style.zIndex) || 0;
+                if (zIndex > 100 || style.position === 'fixed' || 
+                    (candidate.closest('[class*="modal"], [class*="overlay"], [class*="preview"], [class*="mask"], [class*="viewer"], [class*="layer"]'))) {
+                  previewImg = candidate;
+                  break;
+                }
+              }
+            }
           }
-        }
-
-        // Close preview
-        const closeSelectors = [
-          '[class*="close"]',
-          '.ant-modal-close',
-          '[aria-label="关闭"]',
-          '[class*="preview"] [class*="close"]',
-          'button[class*="close"]'
-        ];
-        for (const sel of closeSelectors) {
-          const closeBtn = document.querySelector(sel);
-          if (closeBtn && closeBtn.offsetParent !== null) {
-            closeBtn.click();
+          
+          if (previewImg) {
+            console.log(`[PDD][Vision] Preview found on attempt ${attempt + 1}`);
             break;
           }
         }
-        // Also try pressing Escape to close
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-        await new Promise(r => setTimeout(r, 400));
+
+        if (previewImg && previewImg.src) {
+          let highResUrl = cleanImageUrl(previewImg.src);
+          if (!highResUrls.includes(highResUrl)) {
+            highResUrls.push(highResUrl);
+            console.log(`[PDD][Vision] Got high-res image via preview: ${highResUrl.substring(0, 80)}...`);
+          }
+        } else {
+          // FALLBACK: Use cleaned thumbnail URL if preview failed
+          const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-original') || 
+                          img.getAttribute('data-origin') || img.getAttribute('data-big') || '';
+          let fallbackUrl = dataSrc && dataSrc.startsWith('http') 
+            ? cleanImageUrl(dataSrc) 
+            : cleanImageUrl(thumbnailUrl);
+          if (!highResUrls.includes(fallbackUrl)) {
+            highResUrls.push(fallbackUrl);
+            console.log(`[PDD][Vision] Preview not found, using cleaned URL: ${fallbackUrl.substring(0, 80)}...`);
+          }
+        }
+
+        // Close preview - try multiple methods
+        if (previewImg) {
+          const closeSelectors = [
+            '[class*="preview"] [class*="close"]',
+            '[class*="viewer"] [class*="close"]',
+            '[class*="modal"] [class*="close"]',
+            '[class*="overlay"] [class*="close"]',
+            '[class*="layer"] [class*="close"]',
+            '.ant-modal-close',
+            '.ant-image-preview-operations-operation',
+            '[aria-label="关闭"]',
+            '[aria-label="Close"]',
+            'button[class*="close"]',
+            '[class*="close-btn"]',
+            '[class*="closeBtn"]',
+          ];
+          let closed = false;
+          for (const sel of closeSelectors) {
+            const closeBtn = document.querySelector(sel);
+            if (closeBtn && closeBtn.offsetParent !== null) {
+              closeBtn.click();
+              closed = true;
+              console.log(`[PDD][Vision] Closed preview with: ${sel}`);
+              break;
+            }
+          }
+          if (!closed) {
+            // Try clicking outside the image or pressing Escape
+            console.log('[PDD][Vision] No close button found, trying Escape key');
+            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+          }
+          await new Promise(r => setTimeout(r, 500));
+        } else {
+          await new Promise(r => setTimeout(r, 200));
+        }
       } catch (err) {
         console.warn(`[PDD][Vision] Error getting high-res image:`, err.message);
+        // Try to close any open preview on error
+        try {
+          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
+        } catch(e) {}
+        await new Promise(r => setTimeout(r, 300));
       }
     }
     if (highResUrls.length >= 3) break;
   }
 
+  console.log(`[PDD][Vision] Image extraction complete: ${highResUrls.length} images found`);
   return highResUrls;
+}
+
+/**
+ * Clean CDN resize/quality parameters from image URL to get original resolution
+ */
+function cleanImageUrl(url) {
+  if (!url) return url;
+  let cleaned = url;
+  cleaned = cleaned.replace(/[?&]x-oss-process=[^&]*/g, '');
+  cleaned = cleaned.replace(/[?&]imageView2[^&]*/g, '');
+  cleaned = cleaned.replace(/[?&](w|h|width|height|quality|q|resize|thumbnail|imageMogr2)=[^&]*/gi, '');
+  // Also handle PDD style path-based params like /format/webp or /thumbnail/xxx
+  cleaned = cleaned.replace(/\/thumbnail\/[^/]*/g, '');
+  cleaned = cleaned.replace(/\/quality\/[^/]*/g, '');
+  cleaned = cleaned.replace(/\/format\/webp/g, '');
+  // Clean up trailing ? or &
+  cleaned = cleaned.replace(/[?&]$/, '');
+  return cleaned;
 }
 
 /**
@@ -2216,6 +2797,12 @@ ipcRenderer.on('platform:send-reply', async (event, data) => {
     
     // Wait 2 seconds, then check if there are more unread conversations before switching
     setTimeout(() => {
+      // Skip auto-switching if human is operating
+      if (shouldPauseForHumanAction()) {
+        console.log('[PDD] Human action detected, skipping auto-switch to next conversation');
+        return;
+      }
+      
       const unreadConvs = findUnreadConversations();
       if (unreadConvs.length > 0) {
         // Limit consecutive Shift+Tab to prevent infinite loop
@@ -2625,8 +3212,6 @@ function init() {
     if (hasChat) {
       clearInterval(checkReady);
       console.log('[PDD] Chat page detected, starting monitoring');
-      // Notify main process that login is successful
-      ipcRenderer.send('platform:login-success', { platformId: PLATFORM_ID });
       startMonitoring();
     }
   }, 2000);
