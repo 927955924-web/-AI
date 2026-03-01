@@ -25,18 +25,23 @@ const state = {
   replyingStartTime: 0,         // Timestamp when isReplying was set to true (safety timeout)
   observerActive: false,
   scanInterval: null,
+  processTimer: null,
   lastScanTime: 0,
   replyTimeout: 60000,  // Don't reply again to same customer within 60 seconds unless they send new message
   lastShiftTabTime: 0,  // Track last Shift+Tab press time
-  shiftTabCooldown: 10000,  // Cooldown between Shift+Tab presses (10 seconds)
+  shiftTabCooldown: 5000,  // Cooldown between Shift+Tab presses (5 seconds, optimized from 10s)
   consecutiveNoUnread: 0,  // Track consecutive times no unread found after Shift+Tab
   consecutiveShiftTab: 0,  // Track consecutive Shift+Tab presses to prevent infinite loop
   consecutiveNoMessage: 0,  // Track conversations with no real buyer message
   visitedTimeoutConvs: new Set(),  // Track timeout conversations we've already checked (no real msg)
   // Human action detection - pause auto-reply when human is operating
   lastHumanActionTime: 0,        // Timestamp of last human action (keyboard/mouse)
-  humanActionGracePeriod: 5000,  // Wait 5 seconds after human action before resuming auto-reply
-  humanActionListenersActive: false  // Track if human action listeners are set up
+  humanActionGracePeriod: 3000,  // Wait 3 seconds after human action before resuming auto-reply (optimized from 5s)
+  humanActionListenersActive: false,  // Track if human action listeners are set up
+  // Message preview tracking - detect new messages by preview text change
+  conversationPreviews: new Map(),  // Track last message preview for each conversation: convId -> previewText
+  lastFullScanTime: 0,  // Track last time we did a full conversation scan
+  fullScanInterval: 10000,  // Do a full scan every 10 seconds to catch missed messages
 };
 
 // Listen for shop context from main process (so we know which shop this BrowserView belongs to)
@@ -207,6 +212,8 @@ function findElements(strategies) {
 function findUnreadConversations() {
   const countdownItems = [];  // New messages with countdown
   const timeoutItems = [];    // Overdue messages
+  const unreadBadgeItems = []; // Items with unread badge (red dot)
+  const previewChangedItems = []; // Items with message preview changed (new message detection)
 
   let allItems = [];
   
@@ -366,11 +373,94 @@ function findUnreadConversations() {
         foundTimeout = true;
       }
     }
+
+    if (!foundTimeout) {
+      const unreplyEl = item.querySelector('[class*="unreply"], [class*="unreplied"], [class*="unanswered"], [class*="no-reply"]');
+      const unreplyText = (unreplyEl ? unreplyEl.textContent : '') || '';
+      if (unreplyText.includes('未回复') || unreplyText.includes('待回复') || unreplyText.includes('未回')) {
+        timeoutItems.push(item);
+        foundTimeout = true;
+      }
+    }
+
+    if (!foundTimeout) {
+      if (itemText.includes('未回复') || itemText.includes('待回复') || itemText.includes('未回')) {
+        timeoutItems.push(item);
+        foundTimeout = true;
+      }
+    }
+    
+    // --- Check for unread badge (red dot) - NEW DETECTION STRATEGY ---
+    if (!foundCountdown && !foundTimeout) {
+      const badgeSelectors = [
+        '[class*="badge"]', '[class*="unread"]', '[class*="dot"]', 
+        '[class*="red-point"]', '[class*="new-msg"]', '[class*="count"]',
+        '[class*="num"]', '[class*="tip"]'
+      ];
+      for (const sel of badgeSelectors) {
+        const badge = item.querySelector(sel);
+        if (badge) {
+          const badgeText = badge.textContent.trim();
+          const badgeStyle = window.getComputedStyle(badge);
+          const bgColor = badgeStyle.backgroundColor;
+          // Check if it's a red/orange badge (typical unread indicator)
+          const isRedBadge = bgColor.includes('rgb(255') || bgColor.includes('rgb(238') || 
+                             bgColor.includes('rgba(255') || badgeStyle.color === 'red';
+          // Check if badge has number content (unread count)
+          const hasNumber = /^\d+$/.test(badgeText) && parseInt(badgeText) > 0;
+          
+          if (isRedBadge || hasNumber) {
+            unreadBadgeItems.push(item);
+            break;
+          }
+        }
+      }
+    }
+    
+    // --- NEW: Check for message preview change (detect new messages without indicators) ---
+    if (!foundCountdown && !foundTimeout) {
+      // Extract conversation ID (customer name or unique identifier)
+      const nameEl = item.querySelector('[class*="name"], [class*="nick"], [class*="title"]');
+      const dataId =
+        item?.dataset?.sessionId ||
+        item?.dataset?.visitorId ||
+        item?.dataset?.id ||
+        item?.dataset?.uid ||
+        item?.getAttribute?.('data-session-id') ||
+        item?.getAttribute?.('data-visitor-id') ||
+        item?.getAttribute?.('data-id') ||
+        item?.getAttribute?.('data-uid');
+      const convId = dataId ? `sid_${String(dataId).trim()}` : (nameEl ? nameEl.textContent.trim() : itemText.substring(0, 30));
+      
+      // Extract last message preview text
+      const previewEl = item.querySelector('[class*="msg"], [class*="preview"], [class*="last-msg"], [class*="content"]');
+      const previewText = previewEl ? previewEl.textContent.trim() : '';
+      
+      if (convId && previewText.length > 0) {
+        const prevPreview = state.conversationPreviews.get(convId);
+        
+        // If preview changed and it's not our own message (check for common sent patterns)
+        if (prevPreview && prevPreview !== previewText) {
+          // Check if this looks like a buyer message (not starting with common merchant patterns)
+          const isMerchantMsg = previewText.startsWith('亲，') || previewText.startsWith('您好') || 
+                                previewText.includes('[客服]') || previewText.includes('已发送');
+          
+          if (!isMerchantMsg) {
+            console.log(`[PDD] Preview changed for "${convId}": "${prevPreview.substring(0, 20)}" -> "${previewText.substring(0, 20)}"`);
+            previewChangedItems.push(item);
+          }
+        }
+        
+        // Update stored preview
+        state.conversationPreviews.set(convId, previewText);
+      }
+    }
   });
 
-  // Return countdown items first (priority), then timeout items
-  console.log(`[PDD] Found ${countdownItems.length} countdown, ${timeoutItems.length} timeout conversations`);
-  return [...countdownItems, ...timeoutItems];
+  // Return countdown items first (priority), then timeout, then unread badge, then preview-changed items
+  console.log(`[PDD] Found ${countdownItems.length} countdown, ${timeoutItems.length} timeout, ${unreadBadgeItems.length} unread-badge, ${previewChangedItems.length} preview-changed conversations`);
+  const merged = [...countdownItems, ...timeoutItems, ...unreadBadgeItems, ...previewChangedItems];
+  return Array.from(new Set(merged));
 }
 
 /**
@@ -661,9 +751,94 @@ function isProductLinkOnly(text) {
 }
 
 /**
- * Collect full conversation context (recent messages)
+ * Scroll chat area to load more history messages
+ * Returns true if more messages were loaded
  */
-function collectConversationContext() {
+async function scrollToLoadHistory() {
+  const chatArea = findElement([
+    '[class*="chat-content"]',
+    '[class*="message-list"]',
+    '[class*="msg-list"]',
+    '[class*="chat-body"]',
+    '[class*="im-content"]',
+    '[class*="chat-record"]',
+    '[class*="chat-box"]'
+  ]);
+  
+  if (!chatArea) return false;
+  
+  const initialMsgCount = chatArea.children.length;
+  const initialScrollTop = chatArea.scrollTop;
+  
+  // Scroll to top to trigger loading more messages
+  chatArea.scrollTop = 0;
+  
+  // Wait for potential lazy-load
+  await new Promise(r => setTimeout(r, 500));
+  
+  const newMsgCount = chatArea.children.length;
+  const loadedMore = newMsgCount > initialMsgCount;
+  
+  // Scroll back to bottom
+  chatArea.scrollTop = chatArea.scrollHeight;
+  
+  return loadedMore;
+}
+
+/**
+ * Collect full conversation context with scroll to load history
+ * This ensures we get the complete conversation, not just visible messages
+ */
+async function collectFullConversationContext() {
+  const chatArea = findElement([
+    '[class*="chat-content"]',
+    '[class*="message-list"]',
+    '[class*="msg-list"]',
+    '[class*="chat-body"]',
+    '[class*="im-content"]',
+    '[class*="chat-record"]',
+    '[class*="chat-box"]'
+  ]);
+  
+  if (chatArea) {
+    // Save current scroll position
+    const originalScrollTop = chatArea.scrollTop;
+    
+    // Try to load more history by scrolling up (max 3 attempts)
+    let loadAttempts = 0;
+    while (loadAttempts < 3) {
+      chatArea.scrollTop = 0;
+      await new Promise(r => setTimeout(r, 300));
+      
+      // Check if we're at the very top (no more to load)
+      if (chatArea.scrollTop === 0) {
+        loadAttempts++;
+      } else {
+        break;
+      }
+    }
+    
+    // Small delay to ensure all messages are rendered
+    await new Promise(r => setTimeout(r, 200));
+    
+    // Now collect all messages
+    const context = collectConversationContext(true); // true = collect all, not just last 10
+    
+    // Scroll back to bottom so user sees latest messages
+    chatArea.scrollTop = chatArea.scrollHeight;
+    
+    return context;
+  }
+  
+  // Fallback to regular context collection
+  return collectConversationContext(false);
+}
+
+/**
+ * Collect full conversation context (recent messages)
+ * @param {boolean} collectAll - If true, collect all visible messages; if false, only last 10
+ */
+function collectConversationContext(collectAll = false) {
   const messageSelectors = [
     '[class*="msg-item"]',
     '[class*="message-item"]',
@@ -696,9 +871,12 @@ function collectConversationContext() {
     }
   }
 
-  // Collect last 10 messages as context
+  // Collect messages as context
+  // If collectAll is true, collect up to 30 messages for full context
+  // Otherwise, collect last 10 messages for quick context
+  const maxMessages = collectAll ? 30 : 10;
   const contextLines = [];
-  const recentItems = messageItems.slice(-10);
+  const recentItems = messageItems.slice(-maxMessages);
   
   for (const item of recentItems) {
     const msgText = extractMessageText(item);
@@ -706,6 +884,10 @@ function collectConversationContext() {
     
     const role = isCustomerMessage(item) ? '买家' : '客服';
     contextLines.push(`${role}: ${msgText}`);
+  }
+  
+  if (collectAll) {
+    console.log(`[PDD] Collected ${contextLines.length} messages for full context`);
   }
 
   return contextLines.join('\n');
@@ -1150,34 +1332,63 @@ async function sendMessage(text) {
   input.dispatchEvent(new Event('input', { bubbles: true }));
   await new Promise(r => setTimeout(r, 100));
 
-  // Set the full text directly (more reliable than character-by-character)
-  logToMain('Setting text content...');
-  if (isContentEditable) {
-    input.innerText = text;
-  } else {
-    // Use native setter for React-controlled inputs
-    const setter = Object.getOwnPropertyDescriptor(
-      window.HTMLTextAreaElement.prototype, 'value'
-    )?.set;
-    if (setter) {
-      setter.call(input, text);
-      logToMain('Used native setter for React textarea');
+  // Set text using execCommand as PRIMARY method (best React/framework compatibility)
+  // execCommand('insertText') fires native input events that React's onChange handler recognizes
+  logToMain('Setting text content (execCommand primary)...');
+  let textSetSuccess = false;
+  
+  // Method A: execCommand('insertText') - works for both textarea and contentEditable when focused
+  try {
+    input.focus();
+    if (isContentEditable) {
+      // Select all existing content first
+      const selection = window.getSelection();
+      const range = document.createRange();
+      range.selectNodeContents(input);
+      selection.removeAllRanges();
+      selection.addRange(range);
     } else {
-      input.value = text;
-      logToMain('Used direct value assignment');
+      // Select all for textarea
+      input.select();
     }
+    const execResult = document.execCommand('insertText', false, text);
+    if (execResult) {
+      logToMain('execCommand insertText succeeded');
+      textSetSuccess = true;
+    } else {
+      logToMain('execCommand insertText returned false, trying alternatives...', 'warn');
+    }
+  } catch (e) {
+    logToMain(`execCommand failed: ${e.message}, trying alternatives...`, 'warn');
+  }
+  
+  // Method B: Fallback to native setter + event dispatch (for older Electron or restricted environments)
+  if (!textSetSuccess) {
+    if (isContentEditable) {
+      input.innerText = text;
+      logToMain('Used innerText for contentEditable (fallback)');
+    } else {
+      const setter = Object.getOwnPropertyDescriptor(
+        window.HTMLTextAreaElement.prototype, 'value'
+      )?.set;
+      if (setter) {
+        setter.call(input, text);
+        logToMain('Used native setter for React textarea (fallback)');
+      } else {
+        input.value = text;
+        logToMain('Used direct value assignment (fallback)');
+      }
+    }
+    
+    // Dispatch events to notify React/framework about the value change
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    const nativeInputEvent = new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' });
+    input.dispatchEvent(nativeInputEvent);
+    logToMain('Dispatched input/change events (fallback)');
   }
 
-  // Trigger input event to notify the app
-  input.dispatchEvent(new Event('input', { bubbles: true }));
-  input.dispatchEvent(new Event('change', { bubbles: true }));
-  
-  // Also dispatch React-style events
-  const nativeInputEvent = new InputEvent('input', { bubbles: true, data: text, inputType: 'insertText' });
-  input.dispatchEvent(nativeInputEvent);
-  logToMain('Dispatched input/change events');
-
-  // Wait for the input to be processed
+  // Wait for the input to be processed by the framework
   await new Promise(r => setTimeout(r, 500));
 
   // Verify the text is in the input
@@ -1185,14 +1396,28 @@ async function sendMessage(text) {
   logToMain(`Verification - text in input: "${currentValue?.substring(0, 50)}..." (${currentValue?.length || 0} chars)`);
   
   if (!currentValue || currentValue.length < text.length * 0.8) {
-    logToMain('Text not properly entered, retrying with alternative method...', 'warn');
-    // Retry with execCommand for contentEditable
+    logToMain('Text not properly entered, retrying with all methods...', 'warn');
+    // Last resort: try all methods
+    input.focus();
+    await new Promise(r => setTimeout(r, 100));
     if (isContentEditable) {
-      input.focus();
       document.execCommand('selectAll', false, null);
       document.execCommand('insertText', false, text);
+    } else {
+      // For textarea: try setting value via defineProperty to bypass React's tracker
+      const nativeSet = Object.getOwnPropertyDescriptor(window.HTMLTextAreaElement.prototype, 'value')?.set;
+      if (nativeSet) {
+        nativeSet.call(input, text);
+      } else {
+        input.value = text;
+      }
+      input.dispatchEvent(new Event('input', { bubbles: true }));
     }
     await new Promise(r => setTimeout(r, 300));
+    
+    // Final verification
+    const retryValue = isContentEditable ? input.innerText : input.value;
+    logToMain(`Retry verification - text in input: "${retryValue?.substring(0, 50)}..." (${retryValue?.length || 0} chars)`);
   }
 
   logToMain('Text entered, attempting to send...');
@@ -1238,15 +1463,24 @@ async function sendMessage(text) {
   
   if (sendButton) {
     logToMain('Clicking send button...');
+    // Ensure input is still focused before clicking (some UIs clear on blur)
+    input.focus();
+    await new Promise(r => setTimeout(r, 50));
     sendButton.click();
     await new Promise(r => setTimeout(r, 200));
   } else {
-    logToMain('No send button found, will rely on Enter key', 'warn');
+    logToMain('No send button found, will rely on Enter/Ctrl+Enter key', 'warn');
   }
   
   // Method 2: Use native Electron sendInputEvent for trusted Enter key (backup)
+  // Try both Enter and Ctrl+Enter since PDD may use either to send
   logToMain('Also sending native Enter key as backup...');
+  input.focus();
   ipcRenderer.send('platform:send-enter', PLATFORM_ID);
+  
+  // Method 3: Also try Ctrl+Enter (some PDD configurations use Ctrl+Enter to send)
+  await new Promise(r => setTimeout(r, 200));
+  ipcRenderer.send('platform:send-ctrl-enter', PLATFORM_ID);
   
   // Wait and verify message was sent
   await new Promise(r => setTimeout(r, 500));
@@ -1257,7 +1491,28 @@ async function sendMessage(text) {
   logToMain(`After send check - input value: "${afterSendValue?.substring(0, 30) || '(empty)'}", likely sent: ${wasSent}`);
   
   if (!wasSent) {
-    logToMain('Message may not have been sent - input still contains text', 'warn');
+    logToMain('Message may not have been sent - input still contains text. Will retry once...', 'warn');
+    // Retry: re-focus input and try send button + Enter again
+    input.focus();
+    await new Promise(r => setTimeout(r, 200));
+    
+    if (sendButton && sendButton.offsetParent !== null) {
+      sendButton.click();
+      await new Promise(r => setTimeout(r, 300));
+    }
+    ipcRenderer.send('platform:send-enter', PLATFORM_ID);
+    await new Promise(r => setTimeout(r, 300));
+    ipcRenderer.send('platform:send-ctrl-enter', PLATFORM_ID);
+    await new Promise(r => setTimeout(r, 500));
+    
+    const retryValue = isContentEditable ? input.innerText : input.value;
+    const retrySent = !retryValue || retryValue.length < 5;
+    logToMain(`Retry send check - input value: "${retryValue?.substring(0, 30) || '(empty)'}", sent: ${retrySent}`);
+    
+    if (!retrySent) {
+      logToMain('Message still not sent after retry', 'error');
+      return false;
+    }
   }
   
   logToMain(`Message send attempt completed for: ${text.substring(0, 50)}`);
@@ -1314,6 +1569,10 @@ function isLastMessageFromMerchant() {
       // But if it has images or videos, it's a real message - don't skip
       const hasMedia = item.querySelector('img[src*="http"], video, [class*="image"], [class*="video"], [class*="img"]');
       if (!hasMedia) continue;
+    }
+    
+    if (text && text.length > 0 && isPddSystemMessage(text)) {
+      continue;
     }
 
     // If last meaningful message is NOT from customer, it's from us
@@ -1391,8 +1650,10 @@ async function processCurrentConversation() {
       state.processedMessages = new Set(arr.slice(-300));
     }
 
-    // Collect full conversation context
-    const conversationContext = collectConversationContext();
+    // Collect full conversation context with scroll to load history
+    // This ensures AI has complete conversation context for accurate replies
+    console.log(`[PDD] Loading full conversation history...`);
+    const conversationContext = await collectFullConversationContext();
     
     // Extract product names from order panel for product-specific KB matching
     // Click "个人订单" tab first to get buyer-specific orders
@@ -1598,9 +1859,22 @@ function startMonitoring() {
   // Initialize: only mark already-replied conversations as processed
   initializeExistingMessages();
 
+  function scheduleProcess(delayMs = 600) {
+    if (state.isProcessing) return;
+    if (state.processTimer) {
+      clearTimeout(state.processTimer);
+    }
+    state.processTimer = setTimeout(() => {
+      state.processTimer = null;
+      Promise.resolve(processCurrentConversation()).catch((e) => {
+        console.error('[PDD] processCurrentConversation error:', e?.message || e);
+      });
+    }, delayMs);
+  }
+
   // 1. Process current conversation if last message is from buyer (not merchant)
   if (!isLastMessageFromMerchant()) {
-    processCurrentConversation();
+    scheduleProcess(800);
   } else {
     console.log('[PDD] Last message is from merchant on startup, skipping initial process');
   }
@@ -1620,6 +1894,12 @@ function startMonitoring() {
   // Load all conversations before scanning
   setTimeout(async () => {
     await loadAllConversations();
+    try {
+      findUnreadConversations();
+      console.log('[PDD] Preview baseline ready');
+    } catch (e) {
+      console.warn('[PDD] Preview baseline init failed:', e?.message || e);
+    }
   }, 1500);
 
   // 3. Aggressive startup scan: scan unread/timeout conversations immediately and again after delay
@@ -1664,7 +1944,7 @@ function startMonitoring() {
       }
     }
     if (hasNewContent && !state.isProcessing) {
-      setTimeout(() => processCurrentConversation(), 500);
+      scheduleProcess(600);
     }
   });
 
@@ -1690,8 +1970,8 @@ function startMonitoring() {
       
       // If we've had multiple consecutive "no unread" results, extend cooldown
       if (state.consecutiveNoUnread >= 3) {
-        // After 3 consecutive failures, wait longer (30 seconds)
-        if (now - state.lastShiftTabTime < 30000) {
+        // After 3 consecutive failures, wait longer (15 seconds, optimized from 30s)
+        if (now - state.lastShiftTabTime < 15000) {
           return;
         }
         // Reset counter after extended wait
@@ -1706,12 +1986,17 @@ function startMonitoring() {
         state.consecutiveNoUnread = 0;  // Reset counter on success
         ipcRenderer.send('platform:send-shift-tab', PLATFORM_ID);
         // Process after switch
-        setTimeout(() => processCurrentConversation(), 1500);
+        scheduleProcess(1500);
+      } else {
+        if (now - (state.lastFullScanTime || 0) > state.fullScanInterval) {
+          state.lastFullScanTime = now;
+          scanUnreadConversations();
+        }
       }
     }
-  }, 5000);  // Changed from 3000 to 5000ms
+  }, 3000);  // Optimized from 5000ms to 3000ms for faster response
 
-  // 6. Periodic check on current conversation (every 2 seconds)
+  // 6. Periodic check on current conversation (every 1.5 seconds, optimized from 2s)
   setInterval(() => {
     // Skip if human is operating
     if (shouldPauseForHumanAction()) {
@@ -1719,9 +2004,9 @@ function startMonitoring() {
     }
     
     if (!state.isProcessing) {
-      processCurrentConversation();
+      scheduleProcess(0);
     }
-  }, 2000);
+  }, 1500);
 
   console.log('[PDD] Message monitoring active');
 }
@@ -2105,7 +2390,9 @@ function extractChatImages() {
     '[class*="MsgItem"]',      // PDD uses camelCase sometimes
     '[class*="MessageItem"]',
     '[class*="chatItem"]',
-    '[class*="msgContent"]'
+    '[class*="msgContent"]',
+    '[class*="bubble"]',       // Add bubble selector
+    '[class*="Bubble"]'
   ];
 
   let messageItems = [];
@@ -2130,7 +2417,9 @@ function extractChatImages() {
       '[class*="ChatContent"]',
       '[class*="MessageList"]',
       '[class*="chatList"]',
-      '[class*="msgList"]'
+      '[class*="msgList"]',
+      '[class*="chatWrap"]',
+      '[class*="messageWrap"]'
     ];
     for (const selector of chatAreaSelectors) {
       const chatArea = document.querySelector(selector);
@@ -2145,8 +2434,8 @@ function extractChatImages() {
   // Final fallback: scan all images in chat area directly
   if (messageItems.length === 0) {
     console.log('[PDD][Vision] No message containers found, scanning all images in document...');
-    // Try to find images in the main chat area
-    const allImages = document.querySelectorAll('img[src*="pddpic"], img[src*="pinduoduo"], img[src*="yangkeduo"]');
+    // Try to find images in the main chat area - expanded patterns
+    const allImages = document.querySelectorAll('img[src*="pddpic"], img[src*="pinduoduo"], img[src*="yangkeduo"], img[src*="t00img"], img[src*="img.pddpic"]');
     console.log(`[PDD][Vision] Found ${allImages.length} PDD-hosted images`);
     for (const img of allImages) {
       if (!isContentImage(img)) continue;
@@ -2227,7 +2516,7 @@ function extractChatImages() {
  * PRIMARY method: Click to open preview (simulates human viewing)
  * FALLBACK: Clean URL parameters if click fails
  */
-async function getHighResImages() {
+function getHighResImages() {
   const messageSelectors = [
     '[class*="msg-item"]',
     '[class*="message-item"]',
@@ -2259,9 +2548,8 @@ async function getHighResImages() {
   const highResUrls = [];
   const recentItems = messageItems.slice(-8);
 
-  console.log('[PDD][Vision] Starting image extraction with click-to-preview...');
+  console.log('[PDD][Vision] Starting non-invasive image URL extraction...');
 
-  // PRIMARY: Try click-to-preview for all buyer images (simulates human viewing)
   for (const item of recentItems) {
     if (!isCustomerMessage(item)) continue;
 
@@ -2274,138 +2562,19 @@ async function getHighResImages() {
       }
       if (highResUrls.length >= 3) break;
 
-      try {
-        const thumbnailUrl = img.src || '';
-        if (!thumbnailUrl.startsWith('http')) continue;
+      const thumbnailUrl = img.src || '';
+      if (!thumbnailUrl.startsWith('http')) continue;
 
-        console.log(`[PDD][Vision] Clicking image to open preview: ${thumbnailUrl.substring(0, 60)}...`);
-        
-        // Click thumbnail to open preview (simulates human action)
-        img.click();
-        
-        // Wait for preview modal to appear
-        let previewImg = null;
-        for (let attempt = 0; attempt < 8; attempt++) {
-          await new Promise(r => setTimeout(r, 400));
-          
-          // PDD-specific and generic preview selectors
-          const previewSelectors = [
-            '[class*="image-preview"] img',
-            '[class*="img-preview"] img',
-            '[class*="ImgPreview"] img',
-            '[class*="ImagePreview"] img',
-            '[class*="image-viewer"] img',
-            '[class*="ImgViewer"] img',
-            '[class*="preview-wrap"] img',
-            '[class*="pdd-img-view"] img',
-            '[class*="photo-viewer"] img',
-            '[class*="PhotoViewer"] img',
-            '.ant-image-preview-img',
-            '.ant-image-preview img',
-            'img[class*="preview"]',
-            'img[class*="fullscreen"]',
-            '[class*="modal"] img[src*="http"]',
-            '[class*="overlay"] img[src*="http"]',
-            '[class*="mask"] img[src*="http"]',
-            '[class*="layer"] img[src*="http"]',
-          ];
+      // Extract high-res URL from data attributes (no clicking needed)
+      const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-original') ||
+                      img.getAttribute('data-origin') || img.getAttribute('data-big') || '';
+      let highResUrl = dataSrc && dataSrc.startsWith('http')
+        ? cleanImageUrl(dataSrc)
+        : cleanImageUrl(thumbnailUrl);
 
-          for (const sel of previewSelectors) {
-            const candidate = document.querySelector(sel);
-            if (candidate && candidate.src && candidate.src.startsWith('http')) {
-              const candidateRect = candidate.getBoundingClientRect();
-              // Must be larger than thumbnail OR different URL
-              if (candidate.src !== thumbnailUrl || candidateRect.width > 300) {
-                previewImg = candidate;
-                break;
-              }
-            }
-          }
-          
-          // Also search for any large image that appeared in overlay/modal
-          if (!previewImg) {
-            const allImgs = document.querySelectorAll('img[src*="http"]');
-            for (const candidate of allImgs) {
-              const rect = candidate.getBoundingClientRect();
-              if (rect.width > 300 && rect.height > 200) {
-                const style = window.getComputedStyle(candidate.parentElement || candidate);
-                const zIndex = parseInt(style.zIndex) || 0;
-                if (zIndex > 100 || style.position === 'fixed' || 
-                    (candidate.closest('[class*="modal"], [class*="overlay"], [class*="preview"], [class*="mask"], [class*="viewer"], [class*="layer"]'))) {
-                  previewImg = candidate;
-                  break;
-                }
-              }
-            }
-          }
-          
-          if (previewImg) {
-            console.log(`[PDD][Vision] Preview found on attempt ${attempt + 1}`);
-            break;
-          }
-        }
-
-        if (previewImg && previewImg.src) {
-          let highResUrl = cleanImageUrl(previewImg.src);
-          if (!highResUrls.includes(highResUrl)) {
-            highResUrls.push(highResUrl);
-            console.log(`[PDD][Vision] Got high-res image via preview: ${highResUrl.substring(0, 80)}...`);
-          }
-        } else {
-          // FALLBACK: Use cleaned thumbnail URL if preview failed
-          const dataSrc = img.getAttribute('data-src') || img.getAttribute('data-original') || 
-                          img.getAttribute('data-origin') || img.getAttribute('data-big') || '';
-          let fallbackUrl = dataSrc && dataSrc.startsWith('http') 
-            ? cleanImageUrl(dataSrc) 
-            : cleanImageUrl(thumbnailUrl);
-          if (!highResUrls.includes(fallbackUrl)) {
-            highResUrls.push(fallbackUrl);
-            console.log(`[PDD][Vision] Preview not found, using cleaned URL: ${fallbackUrl.substring(0, 80)}...`);
-          }
-        }
-
-        // Close preview - try multiple methods
-        if (previewImg) {
-          const closeSelectors = [
-            '[class*="preview"] [class*="close"]',
-            '[class*="viewer"] [class*="close"]',
-            '[class*="modal"] [class*="close"]',
-            '[class*="overlay"] [class*="close"]',
-            '[class*="layer"] [class*="close"]',
-            '.ant-modal-close',
-            '.ant-image-preview-operations-operation',
-            '[aria-label="关闭"]',
-            '[aria-label="Close"]',
-            'button[class*="close"]',
-            '[class*="close-btn"]',
-            '[class*="closeBtn"]',
-          ];
-          let closed = false;
-          for (const sel of closeSelectors) {
-            const closeBtn = document.querySelector(sel);
-            if (closeBtn && closeBtn.offsetParent !== null) {
-              closeBtn.click();
-              closed = true;
-              console.log(`[PDD][Vision] Closed preview with: ${sel}`);
-              break;
-            }
-          }
-          if (!closed) {
-            // Try clicking outside the image or pressing Escape
-            console.log('[PDD][Vision] No close button found, trying Escape key');
-            document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
-          }
-          await new Promise(r => setTimeout(r, 500));
-        } else {
-          await new Promise(r => setTimeout(r, 200));
-        }
-      } catch (err) {
-        console.warn(`[PDD][Vision] Error getting high-res image:`, err.message);
-        // Try to close any open preview on error
-        try {
-          document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', keyCode: 27, bubbles: true }));
-        } catch(e) {}
-        await new Promise(r => setTimeout(r, 300));
+      if (highResUrl && !highResUrls.includes(highResUrl)) {
+        highResUrls.push(highResUrl);
+        console.log(`[PDD][Vision] Got image URL: ${highResUrl.substring(0, 80)}...`);
       }
     }
     if (highResUrls.length >= 3) break;
@@ -2566,9 +2735,9 @@ async function extractMediaContent() {
     // Set a total timeout for media extraction
     const result = await Promise.race([
       (async () => {
-        // Get high-res images by clicking preview
+        // Get high-res images via URL extraction (non-invasive, no clicking)
         try {
-          content.images = await getHighResImages();
+          content.images = getHighResImages();
         } catch (err) {
           console.warn('[PDD][Vision] High-res image extraction failed, using thumbnails:', err.message);
           content.images = extractChatImages();
