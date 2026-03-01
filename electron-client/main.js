@@ -36,6 +36,7 @@ const { autoUpdater } = require('electron-updater');
 const Store = require('./services/store');
 const { ApiService } = require('./services/api');
 const { getWeChatNativeAdapter } = require('./services/wechat-native');
+const { getQianNiuNativeAdapter } = require('./services/qianniu-native');
 const mqtt = require('mqtt');
 
 // MQTT client for real-time knowledge sync
@@ -47,6 +48,7 @@ let backendProcess = null;
 
 // WeChat native adapter instance
 let wechatAdapter = null;
+let qianniuAdapter = null;
 
 // Initialize store
 const store = new Store({
@@ -63,9 +65,8 @@ const store = new Store({
 const PLATFORMS = {
   qianniu: {
     name: '千牛工作台',
-    url: 'https://qn.taobao.com/',
-    loginUrl: 'https://login.taobao.com/',
-    preload: 'qianniu.js'
+    native: true,
+    adapterUrl: 'http://127.0.0.1:8766'
   },
   pinduoduo: {
     name: '拼多多商家',
@@ -749,6 +750,9 @@ ipcMain.handle('shops:select', async (event, shop) => {
       if (wechatAdapter) {
         await wechatAdapter.cleanup();
       }
+      if (qianniuAdapter) {
+        await qianniuAdapter.cleanup();
+      }
       store.set('currentShop', null);
       // Unsubscribe MQTT topic
       if (mqttClient && currentMqttTopic) {
@@ -819,6 +823,75 @@ ipcMain.handle('shops:select', async (event, shop) => {
         if (!initResult.success) {
           console.log('[Shop] WeChat adapter init:', initResult.message || initResult.error);
           // Don't fail - user can manually start WeChat later
+        }
+      }
+
+      if (electronPlatform === 'qianniu') {
+        console.log('[Shop] Initializing QianNiu native adapter...');
+        qianniuAdapter = getQianNiuNativeAdapter();
+
+        qianniuAdapter.setMessageCallback(async (msgData) => {
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            mainWindow.webContents.send('message:received', msgData);
+          }
+
+          const autoReply = store.get('autoReply');
+          if (!autoReply) return;
+
+          const currentShop = store.get('currentShop');
+          if (currentShop && isShopPaused(currentShop.shopId)) {
+            return;
+          }
+
+          if (processingCustomers.has(msgData.customerId)) {
+            return;
+          }
+          processingCustomers.add(msgData.customerId);
+
+          if (!apiService) {
+            const serverUrl = store.get('serverUrl');
+            const tokens = store.get('tokens');
+            apiService = new ApiService(serverUrl);
+            apiService.onTokenRefreshed((newTokens) => {
+              store.set('tokens', newTokens);
+            });
+            if (tokens) apiService.setTokens(tokens);
+          }
+
+          try {
+            const result = await apiService.generateReply({
+              shop_id: shop.shop_id,
+              customer_id: msgData.customerId,
+              customer_name: msgData.customerName,
+              message: msgData.message,
+              platform: 'taobao'
+            });
+
+            if (result.success && result.data && result.data.reply) {
+              const sendResult = await qianniuAdapter.sendMessage(result.data.reply, msgData.customerName);
+
+              if (sendResult.success) {
+                if (mainWindow && !mainWindow.isDestroyed()) {
+                  mainWindow.webContents.send('message:replied', {
+                    customerId: msgData.customerId,
+                    reply: result.data.reply,
+                    source: result.data.source
+                  });
+                }
+              }
+            }
+          } catch (e) {
+            console.error('[QianNiu] AI reply error:', e.message);
+          } finally {
+            setTimeout(() => {
+              processingCustomers.delete(msgData.customerId);
+            }, 3000);
+          }
+        });
+
+        const initResult = await qianniuAdapter.initialize();
+        if (!initResult.success) {
+          console.log('[Shop] QianNiu adapter init:', initResult.message || initResult.error);
         }
       }
     }
@@ -1406,23 +1479,33 @@ ipcMain.on('platform:new-message', async (event, data) => {
       console.log(`[${platformId}] OrderDetect enabled, extracting order info...`);
       try {
         const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-        orderDetail = await Promise.race([
-          new Promise((resolve) => {
-            const handler = (e, result) => {
-              if (result && result.requestId === requestId) {
-                ipcMain.removeListener('platform:order-info-result', handler);
-                resolve(result.data);
-              }
-            };
-            ipcMain.on('platform:order-info-result', handler);
-            // Send extraction request to the same preload that sent the message
-            event.sender.send('platform:get-order-info', { requestId });
-          }),
-          new Promise((resolve) => setTimeout(() => {
+        orderDetail = await new Promise((resolve) => {
+          let finished = false;
+          const cleanup = () => {
+            if (finished) return;
+            finished = true;
+            clearTimeout(timeout);
+            ipcMain.removeListener('platform:order-info-result', handler);
+          };
+          const handler = (e, result) => {
+            if (result && result.requestId === requestId) {
+              cleanup();
+              resolve(result.data);
+            }
+          };
+          const timeout = setTimeout(() => {
             console.log(`[${platformId}] OrderDetect extraction timeout (3.5s)`);
+            cleanup();
             resolve(null);
-          }, 3500))
-        ]);
+          }, 3500);
+          ipcMain.on('platform:order-info-result', handler);
+          if (event.sender && !event.sender.isDestroyed()) {
+            event.sender.send('platform:get-order-info', { requestId });
+          } else {
+            cleanup();
+            resolve(null);
+          }
+        });
         if (orderDetail) {
           console.log(`[${platformId}] Order info extracted:`, JSON.stringify(orderDetail).substring(0, 500));
         } else {
