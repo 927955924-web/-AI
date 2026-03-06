@@ -138,6 +138,10 @@ let autoLoginTimers = {};  // platformId -> timeoutId
 // Track customers currently being processed to prevent duplicate replies
 const processingCustomers = new Set();
 
+// Message merge buffer: customerId -> { timer, data, event }
+// When mergeMessages is enabled, we buffer incoming messages and wait for buyer to finish typing
+const messageMergeBuffer = new Map();
+
 // Debug mode variables
 let debugWindow = null;
 let debugCountdownTimer = null;
@@ -351,9 +355,14 @@ function createPlatformView(platformId, shopId) {
   // Store by shopId instead of platformId (each shop has its own view)
   platformViews[shopId] = view;
   
-  // Send shopId to preload script after page loads so it knows which shop it belongs to
+  // Send shopId and platform settings to preload script after page loads
   view.webContents.on('did-finish-load', () => {
-    view.webContents.send('shop:set-context', { shopId, platformId });
+    const platformSettings = store.get('platformSettings') || {};
+    view.webContents.send('shop:set-context', {
+      shopId,
+      platformId,
+      contextMessages: platformSettings.contextMessages || 10
+    });
   });
   
   return view;
@@ -829,6 +838,10 @@ ipcMain.handle('shops:select', async (event, shop) => {
       if (electronPlatform === 'qianniu') {
         console.log('[Shop] Initializing QianNiu native adapter...');
         qianniuAdapter = getQianNiuNativeAdapter();
+        const storedQianNiuPath = store.get('qianniuExePath');
+        if (storedQianNiuPath) {
+          qianniuAdapter.setQianNiuPath(storedQianNiuPath);
+        }
 
         qianniuAdapter.setMessageCallback(async (msgData) => {
           if (mainWindow && !mainWindow.isDestroyed()) {
@@ -892,6 +905,21 @@ ipcMain.handle('shops:select', async (event, shop) => {
         const initResult = await qianniuAdapter.initialize();
         if (!initResult.success) {
           console.log('[Shop] QianNiu adapter init:', initResult.message || initResult.error);
+          if (mainWindow && !mainWindow.isDestroyed()) {
+            let info = null;
+            try {
+              info = await qianniuAdapter.getInstallationInfo();
+            } catch (e) {
+              info = null;
+            }
+            mainWindow.webContents.send('shop:native-init-error', {
+              platformId: 'qianniu',
+              step: initResult.step || '',
+              error: initResult.error || initResult.message || '千牛初始化失败',
+              installationInfo: info
+            });
+            mainWindow.webContents.send('log:warn', `[千牛] 初始化失败：${initResult.error || initResult.message || '未知原因'}`);
+          }
         }
       }
     }
@@ -1405,7 +1433,7 @@ function saveConversationRecord({ buyerMessage, customerReply, context, buyerNam
 }
 
 ipcMain.on('platform:new-message', async (event, data) => {
-  const { platformId, customerId, customerName, message, context, timestamp, buyerImages, buyerVideoFrames } = data;
+  const { platformId, customerId, customerName, message, context, timestamp, buyerImages, buyerVideoFrames, orderInfo } = data;
   
   console.log(`[${platformId}] New message from ${customerName}: ${message}`);
   
@@ -1420,7 +1448,7 @@ ipcMain.on('platform:new-message', async (event, data) => {
     console.log(`[${platformId}][Vision] Received ${buyerVideoFrames.length} video frames`);
   }
   
-  // Check if this customer is already being processed
+  // Check if this customer is already being processed (AI reply in progress)
   if (processingCustomers.has(customerId)) {
     console.log(`[${platformId}] Customer ${customerId} already being processed, skipping duplicate`);
     return;
@@ -1440,6 +1468,50 @@ ipcMain.on('platform:new-message', async (event, data) => {
   const currentShop = store.get('currentShop');
   if (currentShop && isShopPaused(currentShop.shopId)) {
     console.log(`[${platformId}] Shop ${currentShop.shopId} is paused, skipping auto-reply`);
+    return;
+  }
+  
+  // [MessageMerge] Check if message merging is enabled
+  const platformSettings = store.get('platformSettings') || {};
+  const mergeEnabled = platformSettings.mergeMessages !== false; // default true
+  const mergeWaitTime = (platformSettings.mergeWaitTime || 5) * 1000; // default 5s
+  
+  if (mergeEnabled) {
+    // Buffer this message - if the same buyer sends another message within mergeWaitTime,
+    // we reset the timer and use the latest data (which includes updated context)
+    const existing = messageMergeBuffer.get(customerId);
+    if (existing) {
+      clearTimeout(existing.timer);
+      console.log(`[${platformId}] Merge: buyer ${customerName} sent another message, resetting wait timer`);
+      if (mainWindow) {
+        mainWindow.webContents.send('message:process-log', { message: `[合并] 买家继续输入中，重置等待...` });
+      }
+    }
+    
+    const timer = setTimeout(() => {
+      messageMergeBuffer.delete(customerId);
+      console.log(`[${platformId}] Merge: wait expired for ${customerName}, processing now`);
+      if (mainWindow) {
+        mainWindow.webContents.send('message:process-log', { message: `[合并] 买家输入完毕，开始处理` });
+      }
+      processNewMessage(event, data);
+    }, mergeWaitTime);
+    
+    messageMergeBuffer.set(customerId, { timer, data, event });
+    console.log(`[${platformId}] Merge: buffered message from ${customerName}, waiting ${mergeWaitTime}ms for more`);
+    return;
+  }
+  
+  // No merge - process immediately
+  processNewMessage(event, data);
+});
+
+async function processNewMessage(event, data) {
+  const { platformId, customerId, customerName, message, context, timestamp, buyerImages, buyerVideoFrames, orderInfo } = data;
+  
+  // Re-check processing lock (may have changed during merge wait)
+  if (processingCustomers.has(customerId)) {
+    console.log(`[${platformId}] Customer ${customerId} already being processed after merge wait, skipping`);
     return;
   }
   
@@ -1475,45 +1547,61 @@ ipcMain.on('platform:new-message', async (event, data) => {
     // [OrderDetect] Check if order detection is enabled and extract order info
     let orderDetail = null;
     const orderDetect = store.get('orderDetect');
-    if (orderDetect) {
-      console.log(`[${platformId}] OrderDetect enabled, extracting order info...`);
-      try {
-        const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
-        orderDetail = await new Promise((resolve) => {
-          let finished = false;
-          const cleanup = () => {
-            if (finished) return;
-            finished = true;
-            clearTimeout(timeout);
-            ipcMain.removeListener('platform:order-info-result', handler);
-          };
-          const handler = (e, result) => {
-            if (result && result.requestId === requestId) {
+    const orderIntentText = `${message || ''}\n${context || ''}`.toLowerCase();
+    const orderIntentKeywords = [
+      '物流', '快递', '发货', '配送', '到货', '催单', '催发货', '没发货', '什么时候发',
+      '订单', '单号', '退款', '退货', '换货', '售后', '签收', '揽收', '派送'
+    ];
+    const hasOrderIntent = orderIntentKeywords.some((k) => orderIntentText.includes(k));
+    const shouldDetectOrder = platformId === 'pinduoduo'
+      ? (orderDetect !== false || hasOrderIntent)
+      : (!!orderDetect || hasOrderIntent);
+    if (shouldDetectOrder) {
+      // Priority: use pre-extracted orderInfo from preload if available and has orders
+      if (orderInfo && orderInfo.orders && orderInfo.orders.length > 0) {
+        console.log(`[${platformId}] Using pre-extracted orderInfo (${orderInfo.orders.length} orders)`);
+        orderDetail = orderInfo;
+      } else {
+        // Fallback: request extraction via IPC (for platforms that don't pre-extract)
+        console.log(`[${platformId}] OrderDetect enabled, extracting order info via IPC...`);
+        try {
+          const requestId = `${Date.now()}-${Math.random().toString(36).substr(2, 6)}`;
+          orderDetail = await new Promise((resolve) => {
+            let finished = false;
+            const cleanup = () => {
+              if (finished) return;
+              finished = true;
+              clearTimeout(timeout);
+              ipcMain.removeListener('platform:order-info-result', handler);
+            };
+            const handler = (e, result) => {
+              if (result && result.requestId === requestId) {
+                cleanup();
+                resolve(result.data);
+              }
+            };
+            const timeout = setTimeout(() => {
+              console.log(`[${platformId}] OrderDetect extraction timeout (3.5s)`);
               cleanup();
-              resolve(result.data);
+              resolve(null);
+            }, 3500);
+            ipcMain.on('platform:order-info-result', handler);
+            if (event.sender && !event.sender.isDestroyed()) {
+              event.sender.send('platform:get-order-info', { requestId });
+            } else {
+              cleanup();
+              resolve(null);
             }
-          };
-          const timeout = setTimeout(() => {
-            console.log(`[${platformId}] OrderDetect extraction timeout (3.5s)`);
-            cleanup();
-            resolve(null);
-          }, 3500);
-          ipcMain.on('platform:order-info-result', handler);
-          if (event.sender && !event.sender.isDestroyed()) {
-            event.sender.send('platform:get-order-info', { requestId });
-          } else {
-            cleanup();
-            resolve(null);
-          }
-        });
-        if (orderDetail) {
-          console.log(`[${platformId}] Order info extracted:`, JSON.stringify(orderDetail).substring(0, 500));
-        } else {
-          console.log(`[${platformId}] No order info found on page`);
+          });
+        } catch (extractErr) {
+          console.error(`[${platformId}] OrderDetect extraction error:`, extractErr.message);
+          orderDetail = null;
         }
-      } catch (extractErr) {
-        console.error(`[${platformId}] OrderDetect extraction error:`, extractErr.message);
-        orderDetail = null;
+      }
+      if (orderDetail) {
+        console.log(`[${platformId}] Order info extracted:`, JSON.stringify(orderDetail).substring(0, 500));
+      } else {
+        console.log(`[${platformId}] No order info found on page`);
       }
     }
     
@@ -1610,7 +1698,20 @@ ipcMain.on('platform:new-message', async (event, data) => {
         return; // Don't auto-send, wait for debug window action
       }
       
-      // Send reply back to platform
+      // Send reply back to platform (with configurable delay to simulate human typing)
+      const platformSettings = store.get('platformSettings') || {};
+      const baseDelay = (platformSettings.replyDelay || 2) * 1000; // default 2s
+      // Add random variation: ±30% of base delay for natural feel
+      const randomRange = baseDelay * 0.3;
+      const actualDelay = Math.max(500, baseDelay + (Math.random() * 2 - 1) * randomRange);
+      
+      console.log(`[${platformId}] Applying reply delay: ${Math.round(actualDelay)}ms (base: ${baseDelay}ms)`);
+      if (mainWindow) {
+        mainWindow.webContents.send('message:process-log', { message: `[AI] 模拟人工输入延迟 ${(actualDelay / 1000).toFixed(1)}s...` });
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, actualDelay));
+      
       event.reply('platform:send-reply', {
         customerId,
         reply: result.data.reply,
@@ -1664,7 +1765,7 @@ ipcMain.on('platform:new-message', async (event, data) => {
       console.log(`[${platformId}] Released lock for customer ${customerId}`);
     }, 3000); // Wait 3 seconds before allowing new requests for same customer
   }
-});
+}
 
 // ============ Debug Mode IPC Handlers ============
 
@@ -2122,6 +2223,24 @@ ipcMain.handle('wechat:send', async (event, { message, contact }) => {
       return { success: false, error: 'WeChat adapter not initialized' };
     }
     return await wechatAdapter.sendMessage(message, contact);
+  } catch (error) {
+    return { success: false, error: error.message };
+  }
+});
+
+// ============ QianNiu Native Adapter IPC Handlers ============
+
+ipcMain.handle('qianniu:installation-info', async () => {
+  try {
+    if (!qianniuAdapter) {
+      qianniuAdapter = getQianNiuNativeAdapter();
+      const storedQianNiuPath = store.get('qianniuExePath');
+      if (storedQianNiuPath) {
+        qianniuAdapter.setQianNiuPath(storedQianNiuPath);
+      }
+    }
+    const info = await qianniuAdapter.getInstallationInfo();
+    return { success: true, data: info };
   } catch (error) {
     return { success: false, error: error.message };
   }
@@ -3449,6 +3568,22 @@ function setupAutoUpdater() {
     if (mainWindow && !mainWindow.isDestroyed()) {
       mainWindow.webContents.send('update:downloaded', {
         version: info.version
+      });
+      
+      // 弹出系统对话框确认安装，防止通知栏按钮被忽略
+      const { dialog } = require('electron');
+      dialog.showMessageBox(mainWindow, {
+        type: 'info',
+        title: '更新下载完成',
+        message: `新版本 v${info.version} 已下载完成`,
+        detail: '是否立即重启并安装更新？',
+        buttons: ['立即安装', '稍后安装'],
+        defaultId: 0,
+        cancelId: 1
+      }).then(({ response }) => {
+        if (response === 0) {
+          autoUpdater.quitAndInstall(false, true);
+        }
       });
     }
   });

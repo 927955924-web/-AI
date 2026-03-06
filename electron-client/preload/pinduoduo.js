@@ -47,7 +47,10 @@ const state = {
 // Listen for shop context from main process (so we know which shop this BrowserView belongs to)
 ipcRenderer.on('shop:set-context', (event, data) => {
   state.shopId = data.shopId;
-  logToMain(`Shop context set: shopId=${data.shopId}`);
+  if (data.contextMessages) {
+    state.contextMessages = data.contextMessages;
+  }
+  logToMain(`Shop context set: shopId=${data.shopId}, contextMessages=${state.contextMessages || 10}`);
 });
 
 /**
@@ -835,6 +838,43 @@ async function collectFullConversationContext() {
 }
 
 /**
+ * Check if a message element is a system or bot notification (not buyer/merchant content)
+ */
+function isSystemOrBotMessage(el) {
+  const className = (el.className || '').toLowerCase();
+  // System/notification class patterns
+  if (className.includes('system') || className.includes('notice') ||
+      className.includes('notification') || className.includes('tip') ||
+      className.includes('time-line') || className.includes('timeline') ||
+      className.includes('divider') || className.includes('separator')) {
+    return true;
+  }
+  const text = (el.textContent || '').trim();
+  // Typical system/bot notification patterns
+  const systemPatterns = [
+    /^以上是历史消息/,
+    /^系统消息/,
+    /^温馨提示/,
+    /^自动回复/,
+    /^当前会话已/,
+    /^该买家.*?进入/,
+    /^买家.*?已离开/,
+    /^会话已结束/,
+    /^您的服务评分/,
+    /^该订单已/,
+    /^平台提醒/,
+    /^请注意.*?服务规范/,
+    /^\d{4}[-\/]\d{1,2}[-\/]\d{1,2}\s+\d{1,2}:\d{2}(:\d{2})?$/  // timestamp-only lines
+  ];
+  for (const pattern of systemPatterns) {
+    if (pattern.test(text)) return true;
+  }
+  // Very short text that's just a timestamp or divider
+  if (text.length > 0 && text.length <= 5 && /^[\d:\/\-\s]+$/.test(text)) return true;
+  return false;
+}
+
+/**
  * Collect full conversation context (recent messages)
  * @param {boolean} collectAll - If true, collect all visible messages; if false, only last 10
  */
@@ -872,13 +912,17 @@ function collectConversationContext(collectAll = false) {
   }
 
   // Collect messages as context
-  // If collectAll is true, collect up to 30 messages for full context
-  // Otherwise, collect last 10 messages for quick context
-  const maxMessages = collectAll ? 30 : 10;
+  // If collectAll is true, collect a larger rolling window for better intent continuity
+  // Otherwise, use the configured context message count (default 10)
+  const configuredCount = state.contextMessages || 10;
+  const maxMessages = collectAll ? Math.min(Math.max(configuredCount * 5, 40), 120) : configuredCount;
   const contextLines = [];
   const recentItems = messageItems.slice(-maxMessages);
   
   for (const item of recentItems) {
+    // Skip system/bot notifications (timestamps, auto-replies, platform tips, etc.)
+    if (isSystemOrBotMessage(item)) continue;
+    
     const msgText = extractMessageText(item);
     if (!msgText || msgText.length < 2) continue;
     
@@ -1709,6 +1753,7 @@ async function processCurrentConversation() {
       productCardIds: productCardIds,  // Include product IDs from chat cards
       buyerImages: buyerImages,  // Include buyer-sent images for vision analysis
       buyerVideoFrames: buyerVideoFrames,  // Include video key frames for vision analysis
+      orderInfo: orderInfo,  // Pre-extracted order info (orders, chatImages) for main process
       timestamp: Date.now()
     });
 
@@ -2172,10 +2217,39 @@ async function extractOrderInfo() {
       } catch (e) {}
     }
 
+    // Extract ALL visible order panels (multi-order support)
+    const seenOrderIds = new Set();
+    const MAX_ORDERS = 3;
+    
     if (orderPanel) {
-      const order = extractSingleOrder(orderPanel);
-      if (order) {
-        result.orders.push(order);
+      // We found at least one; now collect all matching order panels
+      const allOrderPanels = [];
+      for (const selector of orderPanelSelectors) {
+        try {
+          const els = searchRoot.querySelectorAll(selector);
+          for (const el of els) {
+            if (isElementVisible(el) && el.offsetHeight > 10) {
+              allOrderPanels.push(el);
+            }
+          }
+          if (allOrderPanels.length > 0) break;
+        } catch (e) {}
+      }
+      
+      // If no multiple panels found, fallback to the single one we already found
+      if (allOrderPanels.length === 0) {
+        allOrderPanels.push(orderPanel);
+      }
+      
+      for (const panel of allOrderPanels) {
+        if (result.orders.length >= MAX_ORDERS) break;
+        const order = extractSingleOrder(panel);
+        if (order) {
+          // Deduplicate by orderId
+          if (order.orderId && seenOrderIds.has(order.orderId)) continue;
+          if (order.orderId) seenOrderIds.add(order.orderId);
+          result.orders.push(order);
+        }
       }
     }
 
@@ -2199,6 +2273,9 @@ function extractSingleOrder(container) {
     orderId: null,
     paymentStatus: null,
     shippingStatus: null,
+    trackingNumber: null,
+    courierName: null,
+    logisticsTrajectory: null,
     products: []
   };
 
@@ -2235,6 +2312,95 @@ function extractSingleOrder(container) {
     if (shipMatch) order.shippingStatus = shipMatch[1];
   }
 
+  // --- Tracking Number (快递单号) ---
+  const trackingSelectors = [
+    '[class*="express-no"]', '[class*="tracking-no"]', '[class*="waybill"]',
+    '[class*="logistics-no"]', '[class*="express-num"]', '[class*="tracking-num"]',
+    '[class*="express-code"]', '[class*="ship-no"]', '[class*="delivery-no"]'
+  ];
+  for (const sel of trackingSelectors) {
+    try {
+      const el = container.querySelector(sel);
+      if (el && isElementVisible(el)) {
+        const tn = el.textContent.trim().replace(/[^A-Za-z0-9]/g, '');
+        if (tn.length >= 8) {
+          order.trackingNumber = tn;
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+  // Regex fallback for tracking number patterns in text
+  if (!order.trackingNumber) {
+    const trackingPatterns = [
+      /(?:快递单号|运单号|物流单号|快递号|运单编号)[：:\s]*([A-Za-z0-9]{8,30})/,
+      /(?:SF|JT|YT|YD|ZTO|STO|YUND|EMS|JTSD)\d{10,18}/i,
+      /\b(7[0-9]{14,17})\b/,  // Common ZTO/STO pattern
+      /\b(SF\d{12,15})\b/i,   // SF Express
+      /\b(JT\d{13,16})\b/i,   // JiTu Express
+      /\b(YT\d{13,18})\b/i,   // YuanTong
+      /\b(YD\d{13,18})\b/i,   // YunDa
+    ];
+    for (const pattern of trackingPatterns) {
+      const m = text.match(pattern);
+      if (m) {
+        order.trackingNumber = m[1] || m[0];
+        break;
+      }
+    }
+  }
+
+  // --- Courier Name (快递公司) ---
+  const courierSelectors = [
+    '[class*="express-name"]', '[class*="courier-name"]', '[class*="logistics-name"]',
+    '[class*="express-company"]', '[class*="carrier"]', '[class*="ship-company"]'
+  ];
+  for (const sel of courierSelectors) {
+    try {
+      const el = container.querySelector(sel);
+      if (el && isElementVisible(el)) {
+        const cn = el.textContent.trim();
+        if (cn.length >= 2 && cn.length <= 20) {
+          order.courierName = cn;
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+  // Regex fallback for courier name
+  if (!order.courierName) {
+    const courierMatch = text.match(/(顺丰|圆通|中通|韵达|申通|百世|极兔|邮政|EMS|京东物流|德邦|天天快递|丰巢)/);
+    if (courierMatch) order.courierName = courierMatch[1];
+  }
+
+  // --- Logistics Trajectory (物流轨迹) ---
+  const logisticsSelectors = [
+    '[class*="logistics-track"]', '[class*="logistics-detail"]', '[class*="tracking-info"]',
+    '[class*="logistics-info"]', '[class*="express-info"]', '[class*="delivery-track"]',
+    '[class*="shipping-track"]', '[class*="logistics-timeline"]', '[class*="track-list"]'
+  ];
+  for (const sel of logisticsSelectors) {
+    try {
+      const el = container.querySelector(sel);
+      if (el && isElementVisible(el)) {
+        const trackText = el.textContent.trim();
+        if (trackText.length > 5) {
+          // Take first meaningful trajectory entry (latest status), limit to 200 chars
+          order.logisticsTrajectory = trackText.substring(0, 200);
+          break;
+        }
+      }
+    } catch (e) {}
+  }
+  // Regex fallback: extract logistics keywords from text
+  if (!order.logisticsTrajectory) {
+    const logisticsKeywords = /(已揽收|已发出|派送中|正在派送|已签收|运输中|到达.*站|离开.*站|已到达|转运中|已装车|已取件|签收成功|正在运输)[^。\n]{0,60}/;
+    const lm = text.match(logisticsKeywords);
+    if (lm) {
+      order.logisticsTrajectory = lm[0].substring(0, 200);
+    }
+  }
+
   // --- Products ---
   const productEls = container.querySelectorAll('[class*="goods-item"], [class*="goods-info"], [class*="product-item"], [class*="product-info"], [class*="sku-item"]');
   if (productEls.length > 0) {
@@ -2249,7 +2415,7 @@ function extractSingleOrder(container) {
   }
 
   // Only return if we found at least some useful info
-  if (order.orderId || order.paymentStatus || order.shippingStatus || order.products.length > 0) {
+  if (order.orderId || order.paymentStatus || order.shippingStatus || order.trackingNumber || order.products.length > 0) {
     return order;
   }
   return null;
