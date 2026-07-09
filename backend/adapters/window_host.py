@@ -170,7 +170,10 @@ class QianNiuWindowHost:
                 title = buf.value
                 if any(
                     x in title
-                    for x in ("千牛", "工作台", "AliWorkbench", "淘宝")
+                    for x in (
+                        "千牛", "工作台", "卖家中心", "消息中心",
+                        "AliWorkbench", "淘宝", "阿里",
+                    )
                 ):
                     result.append(hwnd)
             except Exception:
@@ -227,7 +230,10 @@ class QianNiuWindowHost:
                     buf = ctypes.create_unicode_buffer(256)
                     user32.GetClassNameW(hwnd, buf, 256)
                     cls = buf.value
-                    if cls and "Chrome" in cls:
+                    if cls and any(
+                        x in cls
+                        for x in ("Chrome_WidgetWin", "Chrome_RenderWidgetHostHWND")
+                    ):
                         rect = (ctypes.c_long * 4)()
                         if user32.GetClientRect(hwnd, ctypes.byref(rect)):
                             area = rect[2] * rect[3]
